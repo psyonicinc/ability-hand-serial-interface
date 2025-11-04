@@ -13,7 +13,15 @@ FetchContent_Declare(
     GIT_TAG master  # You can change this to a specific tag or commit hash
 )
 
-FetchContent_MakeAvailable(serial)
+
+FetchContent_Declare(
+    byte_stuffing
+    GIT_REPOSITORY https://github.com/Ocanath/byte-stuffing.git
+    GIT_TAG        master
+)
+
+
+FetchContent_MakeAvailable(serial byte_stuffing)
 
 # Create executable
 add_executable(${PROJECT_NAME}
@@ -21,7 +29,11 @@ add_executable(${PROJECT_NAME}
 )
 
 # Link serial-cross-platform library
-target_link_libraries(${PROJECT_NAME} PRIVATE serial)
+target_link_libraries(${PROJECT_NAME} 
+	PRIVATE
+	serial
+	PPP
+)
 
 # Include directories if needed
 target_include_directories(${PROJECT_NAME} PRIVATE

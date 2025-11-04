@@ -34,6 +34,27 @@ void abh_unpack_8bit_into_12bit(uint8_t* arr, uint16_t* vals, int valsize)
 }
 
 /*
+ * For 3 byte frames - like read only, etc. 
+ */
+int abh_create_short_frame(abh_api_t * abh, buffer_t * frame)
+{
+	if(abh == NULL || frame == NULL || frame->size == 0)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	if(frame->size < 3)
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+	frame->len = 0;
+	frame->buf[frame->len++] = abh->address;
+	frame->buf[frame->len++] = abh->command_header;
+	frame->buf[frame->len] = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
+	frame->len++;
+	return ABH_SUCCESS;
+}
+
+/*
  *
  * Create a pre-encoding/framing ability hand control frame
  * 

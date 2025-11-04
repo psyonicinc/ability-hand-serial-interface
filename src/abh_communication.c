@@ -33,10 +33,73 @@ void abh_unpack_8bit_into_12bit(uint8_t* arr, uint16_t* vals, int valsize)
 	}
 }
 
+/**
+ * Helper function to append a uint32_t to the end of a buffer_t, little endian
+ */
+int append_uint32(uint32_t value, buffer_t * frame)
+{
+	if(frame == NULL)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	if(frame->size < frame->len + sizeof(uint32_t))
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+	frame->buf[frame->len++] = (unsigned char)(value & 0x000000FF);
+	frame->buf[frame->len++] = (unsigned char)((value & 0x0000FF00) >> 8);
+	frame->buf[frame->len++] = (unsigned char)((value & 0x00FF0000) >> 16);
+	frame->buf[frame->len++] = (unsigned char)((value & 0xFF000000) >> 24);
+	return ABH_SUCCESS;
+}
+
+/**
+ * Helper function to append a uint16_t to the end of a buffer_t, little endian
+ */
+int append_uint16(uint16_t value, buffer_t * frame)
+{
+	if(frame == NULL)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	if(frame->size < frame->len + sizeof(uint16_t))
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+	frame->buf[frame->len++] = (unsigned char)(value & 0x00FF);
+	frame->buf[frame->len++] = (unsigned char)((value & 0xFF00) >> 8);
+	return ABH_SUCCESS;
+}
+
+/*
+* Create a 'retister write' frame with register address and value arguments
+*/
+int abh_create_write_register_frame(abh_api_t * abh, uint32_t address, uint32_t value, buffer_t * frame)
+{
+	if(abh == NULL || frame == NULL || frame->size == 0)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	if(frame->size < 11)
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+	abh->command_header = UART_WRITE_REGISTER;	//rather than throw an error, just assume user knows what they want - load the header
+	frame->len = 0;
+	frame->buf[frame->len++] = abh->address;
+	frame->buf[frame->len++] = abh->command_header;	
+	append_uint32(address, frame);	//overrun checked at start, so no need to handle rc
+	append_uint32(value, frame);
+	frame->buf[frame->len] = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
+	frame->len++;
+	return ABH_SUCCESS;
+}
+
+
 /*
  * For 3 byte frames - like read only, etc. 
  */
-int abh_create_short_frame(abh_api_t * abh, buffer_t * frame)
+int abh_create_short_api_frame(abh_api_t * abh, buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
@@ -46,6 +109,7 @@ int abh_create_short_frame(abh_api_t * abh, buffer_t * frame)
 	{
 		return ABH_ERROR_BUFFER_OVERRUN;
 	}
+	//TODO: add some validation of command header value - it can only be a certain range of values
 	frame->len = 0;
 	frame->buf[frame->len++] = abh->address;
 	frame->buf[frame->len++] = abh->command_header;
@@ -70,9 +134,9 @@ int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
 		return ABH_ERROR_BUFFER_OVERRUN;
 	}
 
-	int bidx = 0;
-	frame->buf[bidx++] = abh->address;
-	frame->buf[bidx++] = abh->command_header;
+	frame->len = 0;
+	frame->buf[frame->len++] = abh->address;
+	frame->buf[frame->len++] = abh->command_header;
 	uint16_t tmpr = 0;
 	for(int ch = 0; ch < NUM_CHANNELS; ch++)
 	{
@@ -111,13 +175,10 @@ int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
 				return ABH_ERROR_INVALID_HEADER;
 			}
 		};
-
-		frame->buf[bidx++] = (unsigned char)(tmpr & 0x00FF);
-		frame->buf[bidx++] = (unsigned char)((tmpr & 0xFF00) >> 8);
+		append_uint16(tmpr, frame);	//top buffer overrun catches overrun scenario, so no need to check return value
 	}
-	frame->buf[bidx] = abh_get_checksum(frame->buf, bidx);
-	bidx++;
-	frame->len = bidx;
+	frame->buf[frame->len] = abh_get_checksum(frame->buf, frame->len);
+	frame->len++;
 	return ABH_SUCCESS;
 }
 

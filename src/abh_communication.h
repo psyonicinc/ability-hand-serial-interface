@@ -22,6 +22,13 @@ enum
     FIXED_VOLTAGE_CONTROL_TX1 = 0x40, 
     FIXED_VOLTAGE_CONTROL_TX2 = 0x41,
     FIXED_VOLTAGE_CONTROL_TX3 = 0x42,
+
+	UART_WRITE_REGISTER = 0xDE,	//command header for write setting
+	UART_READ_REGISTER = 0xDA,	//command header for read setting
+	ENABLE_BLUETOOTH_RADIO = 0x07,	//command to enable bluetooth radio
+	DISABLE_BLUETOOTH_RADIO = 0x08,
+	RESTART_HAND = 0x09,
+	API_EXIT_CMD = 0x7C
 };
 
 enum 

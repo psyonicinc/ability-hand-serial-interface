@@ -24,6 +24,14 @@ enum
     FIXED_VOLTAGE_CONTROL_TX3 = 0x42,
 };
 
+enum 
+{
+	ABH_SUCCESS = 0,
+	ABH_ERROR_INVALID_ARGUMENT = -1,
+	ABH_ERROR_CHECKSUM_MISMATCH = -2,
+	ABH_ERROR_INVALID_REPLY_MODE = -3,
+};
+
 /*
 	Typedef struct wrapper for ability hand API data.
 	Contains all api-related parameters.
@@ -34,10 +42,15 @@ typedef struct abh_api_t
 	uint8_t address;
 	uint8_t command_header;	//frame type, i.e. FIXED_POSITION_CONTROL_TX1...
 	uint8_t format_header;	//reply header
-	int16_t q[NUM_CHANNELS];
-	int16_t qd[NUM_CHANNELS];
-	int16_t vq_d[NUM_CHANNELS];
-	int16_t iq_d[NUM_CHANNELS];
+	int16_t q[NUM_CHANNELS];	//actual position
+	int16_t q_desired[NUM_CHANNELS];	//desired position
+	int16_t vq_desired[NUM_CHANNELS];	//desired voltage
+	int16_t iq[NUM_CHANNELS];	//actual current
+	int16_t iq_desired[NUM_CHANNELS];	//desired current
+	int16_t velocity[NUM_CHANNELS];	//actual velocity
+	int16_t velocity_desired[NUM_CHANNELS];
 	int16_t fsr_raw[NUM_FINGERS*NUM_FSR_PER_FINGER];
+	uint8_t hot_cold_bitmask;
+
 }abh_api_t;
 

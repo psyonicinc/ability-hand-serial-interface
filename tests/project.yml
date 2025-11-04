@@ -101,8 +101,16 @@
     - -:test/support
   :source:
     - ../src/**
+    - ../build/_deps/dartt_protocol-src/src/**
+    - ../build/_deps/byte_stuffing-src/C-COBS/**
+    - ../build/_deps/byte_stuffing-src/HDLC/**
+    # serial-src doesn't have .c files, just headers
   :include:
     - ../src/** # In simple projects, this entry often duplicates :source
+    - ../build/_deps/dartt_protocol-src/src
+    - ../build/_deps/byte_stuffing-src/C-COBS
+    - ../build/_deps/byte_stuffing-src/HDLC
+    - ../build/_deps/serial-src
   :support:
     - test/support
   :libraries: []

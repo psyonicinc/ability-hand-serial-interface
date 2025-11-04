@@ -42,13 +42,61 @@ int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
-		return -1;
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	if(frame->size < 15)
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
 	}
 
 	int bidx = 0;
 	frame->buf[bidx++] = abh->address;
 	frame->buf[bidx++] = abh->command_header;
-	
+	uint16_t tmpr = 0;
+	for(int ch = 0; ch < NUM_CHANNELS; ch++)
+	{
+		switch(abh->command_header)
+		{
+			case FIXED_POSITION_CONTROL_TX1: 
+			case FIXED_POSITION_CONTROL_TX2: 
+			case FIXED_POSITION_CONTROL_TX3: 
+			{	
+				tmpr = (uint16_t)(abh->q_desired[ch]);
+				break;
+			}
+			case FIXED_VELOCITY_CONTROL_TX1: 
+			case FIXED_VELOCITY_CONTROL_TX2: 
+			case FIXED_VELOCITY_CONTROL_TX3: 
+			{
+				tmpr = (uint16_t)(abh->velocity_desired[ch]);
+				break;
+			}
+			case FIXED_TORQUE_CONTROL_TX1: 
+			case FIXED_TORQUE_CONTROL_TX2: 
+			case FIXED_TORQUE_CONTROL_TX3: 
+			{
+				tmpr = (uint16_t)(abh->iq_desired[ch]);
+				break;
+			}
+			case FIXED_VOLTAGE_CONTROL_TX1: 
+			case FIXED_VOLTAGE_CONTROL_TX2: 
+			case FIXED_VOLTAGE_CONTROL_TX3: 
+			{
+				tmpr = (uint16_t)(abh->vq_desired[ch]);
+				break;
+			}
+			default:
+			{
+				return ABH_ERROR_INVALID_HEADER;
+			}
+		};
+
+		frame->buf[bidx++] = (unsigned char)(tmpr & 0x00FF);
+		frame->buf[bidx++] = (unsigned char)((tmpr & 0xFF00) >> 8);
+	}
+	frame->buf[bidx] = abh_get_checksum(frame->buf, bidx);
+	bidx++;
+	frame->len = bidx;
 	return ABH_SUCCESS;
 }
 
@@ -62,7 +110,7 @@ int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh)
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
 	
-	uint8_t chksum = abh_get_checksum(frame->buf, frame->len);
+	uint8_t chksum = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
 	if(chksum != 0)
 	{
 		return ABH_ERROR_CHECKSUM_MISMATCH;
@@ -98,7 +146,7 @@ int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh)
 	}
 	if(reply_mode == 1 || reply_mode == 2)
 	{
-		abh_unpack_8bit_into_12bit(frame->buf[bidx], abh->fsr_raw, 6);
+		abh_unpack_8bit_into_12bit((uint8_t*)frame->buf[bidx], abh->fsr_raw, 6);
 	}
 	else if (reply_mode == 3)
 	{

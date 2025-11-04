@@ -1,18 +1,6 @@
 #include "abh_communication.h"
 
-int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
-{
-	if(abh == NULL || frame == NULL || frame->size == 0)
-	{
-		return -1;
-	}
 
-	int bidx = 0;
-	frame->buf[bidx++] = abh->address;
-	frame->buf[bidx++] = abh->command_header;
-	
-	return ABH_SUCCESS;
-}
 
 /*
 Generic 2's complement hex checksum calculation.
@@ -43,6 +31,25 @@ void abh_unpack_8bit_into_12bit(uint8_t* arr, uint16_t* vals, int valsize)
 		int shift_val = (bidx % 8);
 		vals[validx] |= ((arr[arridx] >> shift_val) & 0x0F) << (bidx % 12);
 	}
+}
+
+/*
+ *
+ * Create a pre-encoding/framing ability hand control frame
+ * 
+ */
+int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
+{
+	if(abh == NULL || frame == NULL || frame->size == 0)
+	{
+		return -1;
+	}
+
+	int bidx = 0;
+	frame->buf[bidx++] = abh->address;
+	frame->buf[bidx++] = abh->command_header;
+	
+	return ABH_SUCCESS;
 }
 
 /*

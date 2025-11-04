@@ -6,6 +6,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 
+
+# Fetch dartt-protocol library
+FetchContent_Declare(
+    dartt_protocol
+    GIT_REPOSITORY https://github.com/Ocanath/dartt-protocol.git
+    GIT_TAG master  # or specify a specific tag/commit
+)
+
 # Fetch serial-cross-platform repository
 FetchContent_Declare(
     serial
@@ -13,7 +21,7 @@ FetchContent_Declare(
     GIT_TAG master  # You can change this to a specific tag or commit hash
 )
 
-
+#fetch byte stuffing library (cobs and ppp)
 FetchContent_Declare(
     byte_stuffing
     GIT_REPOSITORY https://github.com/Ocanath/byte-stuffing.git
@@ -21,18 +29,22 @@ FetchContent_Declare(
 )
 
 
-FetchContent_MakeAvailable(serial byte_stuffing)
+FetchContent_MakeAvailable(dartt_protocol serial byte_stuffing)
 
 # Create executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
+	src/abh_communication.c
 )
 
 # Link serial-cross-platform library
 target_link_libraries(${PROJECT_NAME} 
 	PRIVATE
+	dartt_protocol
+    dartt_checksum
 	serial
 	PPP
+	cobs
 )
 
 # Include directories if needed

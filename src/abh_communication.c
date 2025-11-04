@@ -177,7 +177,7 @@ int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
 		};
 		append_uint16(tmpr, frame);	//top buffer overrun catches overrun scenario, so no need to check return value
 	}
-	frame->buf[frame->len] = abh_get_checksum(frame->buf, frame->len);
+	frame->buf[frame->len] = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
 	frame->len++;
 	return ABH_SUCCESS;
 }

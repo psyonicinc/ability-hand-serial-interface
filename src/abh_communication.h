@@ -1,3 +1,6 @@
+#ifndef ABH_COMMUNICATION_H
+#define ABH_COMMUNICATION_H
+
 #include <stdint.h>
 #include "dartt.h"
 
@@ -63,3 +66,5 @@ typedef struct abh_api_t
 
 }abh_api_t;
 
+
+#endif

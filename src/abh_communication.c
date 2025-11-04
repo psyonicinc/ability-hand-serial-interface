@@ -95,6 +95,28 @@ int abh_create_write_register_frame(abh_api_t * abh, uint32_t address, uint32_t 
 	return ABH_SUCCESS;
 }
 
+/*
+Read register request frame
+*/
+int abh_create_read_register_frame(abh_api_t  * abh, uint32_t address, buffer_t * frame)
+{
+	if(abh == NULL || frame == NULL || frame->size == 0)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	if(frame->size < 7)
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+	abh->command_header = UART_READ_REGISTER;	//rather than throw an error, just assume user knows what they want - load the header
+	frame->len = 0;
+	frame->buf[frame->len++] = abh->address;
+	frame->buf[frame->len++] = abh->command_header;	
+	append_uint32(address, frame);	//overrun checked at start, so no need to handle rc
+	frame->buf[frame->len] = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
+	frame->len++;
+	return ABH_SUCCESS;
+}
 
 /*
  * For 3 byte frames - like read only, etc. 

@@ -162,19 +162,8 @@ int main()
 	auto start_time = std::chrono::steady_clock::now();
 	while(g_running)
 	{
-		//set runtimet targets - load to fixed point format
-		for(int ch = 0; ch < NUM_CHANNELS; ch++)
-		{
-			abh.q_desired[ch] = (int16_t)(fpos[ch] * (32767.f/150.f));
-		}
-		abh.q_desired[5] = (int16_t)(-55.f * (32767.f/150.f));
-
-
-		//create movement frame and send it
-		abh_create_movement_frame(&abh, &tx_frame);
-		unstuff_alias.length = tx_frame.len;	//can do just len copy since buf and size are static and initialized before the while loop
-		int rc = PPP_stuff(&unstuff_alias, &stuff_buf);
-		s.write(stuff_buf.buf, (int)stuff_buf.length);
+		const uint8_t tx_command[] = {0x7E, 0x50, 0x10, 0xBB, 0x3B, 0x88, 0x08, 0x88, 0x08, 0x88, 0x08, 0x88, 0x08, 0x12, 0xD1, 0x87, 0x7E};
+		s.write((uint8_t*)tx_command, sizeof(tx_command));
 		num_writes++;
 
 		//read and parse the response 
@@ -183,7 +172,6 @@ int main()
 		{
 			rx_buffer_alias.length = rxlen;	//make sure length gets loaded - serial doesn't natively work with buffer types
 			PPP_unstuff(&rx_ppp_unstuff_alias, &rx_buffer_alias);
-			// print_ppp_buf(&rx_ppp_unstuff_alias);
 			rx_frame.len = rx_ppp_unstuff_alias.length;
 			int rc = ahb_parse_movement_reply(&rx_frame, &abh);
 			if(rc != ABH_SUCCESS)
@@ -193,7 +181,6 @@ int main()
 			else
 			{
 				num_successful_reads++;
-				// printf("%d, %d\n", abh.fsr_raw[29], abh.q[5]);
 			}
 		}
 		else if(rxlen == -2)

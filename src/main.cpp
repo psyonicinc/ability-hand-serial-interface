@@ -50,10 +50,10 @@ void init_ppp_buffer(ppp_buffer_t * buf, unsigned char * mem, size_t size)
 }
 
 
-int blocking_ble_radio_setting_change(abh_api_t* abh, buffer_t * tx_frame, ppp_buffer_t * unstuff_alias, ppp_buffer_t * stuff_buf, ppp_buffer_t * rx_buffer_alias, ppp_buffer_t * rx_ppp_unstuff_alias, buffer_t * rx_frame,  Serial& s)
+int blocking_ble_radio_setting_change(uint8_t cmd, abh_api_t* abh, buffer_t * tx_frame, ppp_buffer_t * unstuff_alias, ppp_buffer_t * stuff_buf, ppp_buffer_t * rx_buffer_alias, ppp_buffer_t * rx_ppp_unstuff_alias, buffer_t * rx_frame,  Serial& s)
 {
-		//start bluetooth radio enable/disable
-	abh->command_header = ENABLE_BLUETOOTH_RADIO;
+	//start bluetooth radio enable/disable
+	abh->command_header = cmd;
 	abh_create_short_api_frame(abh, tx_frame);
 	unstuff_alias->length = tx_frame->len;	//can do just len copy since buf and size are static and initialized before the while loop
 	int rc = PPP_stuff(unstuff_alias, stuff_buf);
@@ -152,13 +152,14 @@ int main()
 	uint32_t num_successful_reads = 0;
 
 	// Start timing for frequency calculation
-	auto start_time = std::chrono::steady_clock::now();
 
 
-	// blocking_ble_radio_setting_change(&abh, &tx_frame, &unstuff_alias, &stuff_buf, &rx_buffer_alias, &rx_ppp_unstuff_alias, &rx_frame, s);
+	// blocking_ble_radio_setting_change(ENABLE_BLUETOOTH_RADIO, &abh, &tx_frame, &unstuff_alias, &stuff_buf, &rx_buffer_alias, &rx_ppp_unstuff_alias, &rx_frame, s);
+	// blocking_ble_radio_setting_change(DISABLE_BLUETOOTH_RADIO, &abh, &tx_frame, &unstuff_alias, &stuff_buf, &rx_buffer_alias, &rx_ppp_unstuff_alias, &rx_frame, s);
 	
 
 	abh.command_header = FIXED_POSITION_CONTROL_TX1;
+	auto start_time = std::chrono::steady_clock::now();
 	while(g_running)
 	{
 		//set runtimet targets - load to fixed point format
@@ -204,7 +205,13 @@ int main()
 		{
 			printf("ERROR: zero length. \n");
 		}
-
+		auto end_time = std::chrono::steady_clock::now();
+		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+		float elapsed_sec = elapsed_ms / 1000.0f;
+		if(elapsed_sec >= 60)
+		{
+			break;
+		}
 	}
 
 	// Calculate elapsed time and frequency

@@ -1,0 +1,409 @@
+#include "AbilityHand.h"
+#include <cstring>
+#include <cmath>
+
+AbilityHand::AbilityHand()
+{
+    // Initialize hand state
+    memset(&hand_state_, 0, sizeof(hand_state_));
+    hand_state_.address = 0x50;  // Default address
+    hand_state_.command_header = FIXED_POSITION_CONTROL_TX1;  // Default mode
+
+    // Initialize statistics
+    memset(&stats_, 0, sizeof(stats_));
+
+    // Zero all buffer memory
+    memset(tx_mem_, 0, sizeof(tx_mem_));
+    memset(tx_stuffed_mem_, 0, sizeof(tx_stuffed_mem_));
+    memset(rx_stuffed_mem_, 0, sizeof(rx_stuffed_mem_));
+    memset(rx_unstuff_mem_, 0, sizeof(rx_unstuff_mem_));
+}
+
+AbilityHand::~AbilityHand()
+{
+    disconnect();
+}
+
+int AbilityHand::init(unsigned long baud_rate)
+{
+    if (serial_.connected())
+    {
+        return ABH_ERROR_ALREADY_CONNECTED;
+    }
+
+    if (!serial_.autoconnect(baud_rate))
+    {
+        return ABH_ERROR_CONNECTION_FAILED;
+    }
+
+    init_buffers();
+    reset_statistics();
+
+    return ABH_SUCCESS;
+}
+
+int AbilityHand::init(const char* port_name, unsigned long baud_rate)
+{
+    if (serial_.connected())
+    {
+        return ABH_ERROR_ALREADY_CONNECTED;
+    }
+
+    if (!serial_.connect(port_name, baud_rate))
+    {
+        return ABH_ERROR_CONNECTION_FAILED;
+    }
+
+    init_buffers();
+    reset_statistics();
+
+    return ABH_SUCCESS;
+}
+
+void AbilityHand::disconnect()
+{
+    serial_.disconnect();
+}
+
+bool AbilityHand::is_connected() const
+{
+    // Cast away const since Serial::connected() is not const
+    return const_cast<Serial&>(serial_).connected();
+}
+
+void AbilityHand::init_buffers()
+{
+    // Initialize TX buffers
+    tx_frame_.buf = tx_mem_;
+    tx_frame_.size = sizeof(tx_mem_);
+    tx_frame_.len = 0;
+
+    tx_unstuff_alias_.buf = tx_mem_;
+    tx_unstuff_alias_.size = sizeof(tx_mem_);
+    tx_unstuff_alias_.length = 0;
+
+    tx_stuff_buf_.buf = tx_stuffed_mem_;
+    tx_stuff_buf_.size = sizeof(tx_stuffed_mem_);
+    tx_stuff_buf_.length = 0;
+
+    // Initialize RX buffers
+    rx_buffer_alias_.buf = rx_stuffed_mem_;
+    rx_buffer_alias_.size = sizeof(rx_stuffed_mem_);
+    rx_buffer_alias_.length = 0;
+
+    rx_ppp_unstuff_alias_.buf = rx_unstuff_mem_;
+    rx_ppp_unstuff_alias_.size = sizeof(rx_unstuff_mem_);
+    rx_ppp_unstuff_alias_.length = 0;
+
+    rx_frame_.buf = rx_unstuff_mem_;
+    rx_frame_.size = sizeof(rx_unstuff_mem_);
+    rx_frame_.len = 0;
+}
+
+int AbilityHand::set_motion_mode(MotionMode mode)
+{
+    if (!is_connected())
+    {
+        return ABH_ERROR_NOT_CONNECTED;
+    }
+
+    // Map enum to command header
+    switch (mode)
+    {
+        case POSITION_MODE_TX1:
+            hand_state_.command_header = FIXED_POSITION_CONTROL_TX1;
+            break;
+        case POSITION_MODE_TX2:
+            hand_state_.command_header = FIXED_POSITION_CONTROL_TX2;
+            break;
+        case POSITION_MODE_TX3:
+            hand_state_.command_header = FIXED_POSITION_CONTROL_TX3;
+            break;
+        case VELOCITY_MODE_TX1:
+            hand_state_.command_header = FIXED_VELOCITY_CONTROL_TX1;
+            break;
+        case VELOCITY_MODE_TX2:
+            hand_state_.command_header = FIXED_VELOCITY_CONTROL_TX2;
+            break;
+        case VELOCITY_MODE_TX3:
+            hand_state_.command_header = FIXED_VELOCITY_CONTROL_TX3;
+            break;
+        case TORQUE_MODE_TX1:
+            hand_state_.command_header = FIXED_TORQUE_CONTROL_TX1;
+            break;
+        case TORQUE_MODE_TX2:
+            hand_state_.command_header = FIXED_TORQUE_CONTROL_TX2;
+            break;
+        case TORQUE_MODE_TX3:
+            hand_state_.command_header = FIXED_TORQUE_CONTROL_TX3;
+            break;
+        case VOLTAGE_MODE_TX1:
+            hand_state_.command_header = FIXED_VOLTAGE_CONTROL_TX1;
+            break;
+        case VOLTAGE_MODE_TX2:
+            hand_state_.command_header = FIXED_VOLTAGE_CONTROL_TX2;
+            break;
+        case VOLTAGE_MODE_TX3:
+            hand_state_.command_header = FIXED_VOLTAGE_CONTROL_TX3;
+            break;
+        default:
+            return ABH_ERROR_INVALID_HEADER;
+    }
+
+    return ABH_SUCCESS;
+}
+
+int AbilityHand::set_short_mode(ShortMode mode)
+{
+    if (!is_connected())
+    {
+        return ABH_ERROR_NOT_CONNECTED;
+    }
+
+    // Map enum to command header
+    switch (mode)
+    {
+        case DUMMY_READ_TX1:
+            hand_state_.command_header = FIXED_DUMMY_TX1;
+            break;
+        case DUMMY_READ_TX2:
+            hand_state_.command_header = FIXED_DUMMY_TX2;
+            break;
+        case DUMMY_READ_TX3:
+            hand_state_.command_header = FIXED_DUMMY_TX3;
+            break;
+        default:
+            return ABH_ERROR_INVALID_HEADER;
+    }
+
+    return ABH_SUCCESS;
+}
+
+int AbilityHand::exchange_motion_data(int timeout_ms)
+{
+    if (!is_connected())
+    {
+        return ABH_ERROR_NOT_CONNECTED;
+    }
+
+    // Create movement frame
+    int rc = abh_create_movement_frame(&hand_state_, &tx_frame_);
+    if (rc != ABH_SUCCESS)
+    {
+        return rc;
+    }
+
+    return send_and_receive(&tx_frame_, timeout_ms);
+}
+
+int AbilityHand::exchange_short_msg(int timeout_ms)
+{
+    if (!is_connected())
+    {
+        return ABH_ERROR_NOT_CONNECTED;
+    }
+
+    // Create short API frame
+    int rc = abh_create_short_api_frame(&hand_state_, &tx_frame_);
+    if (rc != ABH_SUCCESS)
+    {
+        return rc;
+    }
+
+    return send_and_receive(&tx_frame_, timeout_ms);
+}
+
+int AbilityHand::send_and_receive(buffer_t* tx_frame, int timeout_ms)
+{
+    // Stuff the frame
+    dartt_to_ppp(tx_frame, &tx_unstuff_alias_);
+    int rc = PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+    if (rc != 0)
+    {
+        return ABH_ERROR_STUFF_FAILED;
+    }
+
+    // Send the stuffed frame
+    int bytes_written = serial_.write(tx_stuff_buf_.buf, static_cast<int>(tx_stuff_buf_.length));
+    stats_.num_writes++;
+
+    if (bytes_written != (int)tx_stuff_buf_.length)
+    {
+        return ABH_ERROR_WRITE_FAILED;
+    }
+
+    // Read response
+    int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, rx_buffer_alias_.size, '~', timeout_ms);
+
+    if (rxlen == -2)
+    {
+        // Timeout
+        stats_.num_timeouts++;
+        return ABH_ERROR_TIMEOUT;
+    }
+
+    if (rxlen <= 0)
+    {
+        return ABH_ERROR_INVALID_ARGUMENT;
+    }
+
+    // Unstuff the frame
+    rx_buffer_alias_.length = rxlen;
+    rc = PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
+    if (rc != 0)
+    {
+        stats_.num_parse_errors++;
+        return ABH_ERROR_UNSTUFF_FAILED;
+    }
+
+    // Parse the frame
+    rx_frame_.len = rx_ppp_unstuff_alias_.length;
+    rc = ahb_parse_movement_reply(&rx_frame_, &hand_state_);
+    if (rc != ABH_SUCCESS)
+    {
+        stats_.num_parse_errors++;
+        return rc;
+    }
+
+    // Success
+    stats_.num_successful_reads++;
+    return ABH_SUCCESS;
+}
+
+void AbilityHand::dartt_to_ppp(buffer_t* in, ppp_buffer_t* out)
+{
+    out->buf = in->buf;
+    out->length = in->len;
+    out->size = in->size;
+}
+
+void AbilityHand::set_position_targets(const float positions_deg[NUM_CHANNELS])
+{
+    for (int ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+        hand_state_.q_desired[ch] = (int16_t)(positions_deg[ch] * POSITION_SCALE);
+    }
+}
+
+void AbilityHand::set_velocity_targets(const float velocities_deg_per_sec[NUM_CHANNELS])
+{
+    for (int ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+        hand_state_.velocity_desired[ch] = (int16_t)(velocities_deg_per_sec[ch] * VELOCITY_TO_HAND_SCALE);
+    }
+}
+
+void AbilityHand::set_torque_targets(const float torques_mNm[NUM_CHANNELS])
+{
+    // Convert mNm to current using motor torque constant
+    // Note: This assumes a default current conversion ratio C=1
+    // In production, C should be read from the hand via Bluetooth
+    for (int ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+        float current_amps = torques_mNm[ch] / MOTOR_TORQUE_CONSTANT;
+        hand_state_.iq_desired[ch] = (int16_t)current_amps;  // TODO: multiply by C
+    }
+}
+
+void AbilityHand::set_voltage_targets(const float voltage_percent[NUM_CHANNELS])
+{
+    for (int ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+        int16_t voltage_digital = (int16_t)(voltage_percent[ch] * MAX_VOLTAGE_DIGITAL / 100.0f);
+
+        // Clamp to valid range
+        if (voltage_digital > MAX_VOLTAGE_DIGITAL)
+            voltage_digital = MAX_VOLTAGE_DIGITAL;
+        if (voltage_digital < -MAX_VOLTAGE_DIGITAL)
+            voltage_digital = -MAX_VOLTAGE_DIGITAL;
+
+        hand_state_.vq_desired[ch] = voltage_digital;
+    }
+}
+
+void AbilityHand::get_positions(float positions_deg[NUM_CHANNELS]) const
+{
+    for (int ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+        positions_deg[ch] = hand_state_.q[ch] / POSITION_SCALE;
+    }
+}
+
+void AbilityHand::get_velocities(float velocities_deg_per_sec[NUM_CHANNELS]) const
+{
+    // Convert from rotor velocity (rad/s) to finger velocity (deg/s)
+    for (int ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+        float rotor_velocity_rad_per_sec = hand_state_.velocity[ch] / ROTOR_VELOCITY_FROM_HAND_SCALE;
+
+        // Apply gear ratio (thumb rotator ch5 has different ratio)
+        float gear_ratio = (ch == 5) ? GEAR_RATIO_THUMB_ROTATOR : GEAR_RATIO_FINGERS;
+
+        // Convert rad/s to deg/s and account for gear ratio
+        velocities_deg_per_sec[ch] = rotor_velocity_rad_per_sec * (180.0f / static_cast<float>(M_PI)) / gear_ratio;
+    }
+}
+
+void AbilityHand::get_currents(float currents_amps[NUM_CHANNELS]) const
+{
+    // Note: This assumes a default current conversion ratio C=1
+    // In production, C should be read from the hand via Bluetooth
+    for (int ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+        currents_amps[ch] = (float)hand_state_.iq[ch];  // TODO: divide by C
+    }
+}
+
+void AbilityHand::get_fsr_forces(float forces_newtons[NUM_FINGERS * NUM_FSR_PER_FINGER]) const
+{
+    for (int i = 0; i < NUM_FINGERS * NUM_FSR_PER_FINGER; i++)
+    {
+        // Convert 12-bit ADC value to voltage
+        float voltage = hand_state_.fsr_raw[i] * FSR_VOLTAGE_SCALE;
+
+        // Avoid division by zero
+        if (voltage < 0.001f)
+        {
+            forces_newtons[i] = 0.0f;
+            continue;
+        }
+
+        // Convert voltage to resistance
+        float resistance = FSR_R_CONST1 / voltage + FSR_R_CONST2;
+
+        // Convert resistance to force
+        forces_newtons[i] = FSR_FORCE_C1 / resistance + FSR_FORCE_C2;
+    }
+}
+
+AbilityHand::Statistics AbilityHand::get_statistics() const
+{
+    Statistics result = stats_;
+
+    // Calculate packet loss percentage
+    if (result.num_writes > 0)
+    {
+        result.packet_loss_percent = (1.0f - ((float)result.num_successful_reads / (float)result.num_writes)) * 100.0f;
+    }
+    else
+    {
+        result.packet_loss_percent = 0.0f;
+    }
+
+    return result;
+}
+
+void AbilityHand::reset_statistics()
+{
+    memset(&stats_, 0, sizeof(stats_));
+}
+
+abh_api_t& AbilityHand::get_hand_state()
+{
+    return hand_state_;
+}
+
+const abh_api_t& AbilityHand::get_hand_state() const
+{
+    return hand_state_;
+}

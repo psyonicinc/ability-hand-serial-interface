@@ -13,6 +13,7 @@ add_subdirectory(external/byte-stuffing)
 add_executable(${PROJECT_NAME}
     src/main.cpp
 	src/abh_communication.c
+	src/AbilityHand.cpp
 )
 
 # Link serial-cross-platform library

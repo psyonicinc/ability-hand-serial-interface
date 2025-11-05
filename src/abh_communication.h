@@ -1,6 +1,10 @@
 #ifndef ABH_COMMUNICATION_H
 #define ABH_COMMUNICATION_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include "dartt.h"
 
@@ -73,5 +77,9 @@ int abh_parse_read_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * 
 int abh_create_short_api_frame(abh_api_t * abh, buffer_t * frame);
 int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame);
 int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -124,6 +124,7 @@ private:
     static constexpr float ROTOR_VELOCITY_FROM_HAND_SCALE = 4.0f;
     static constexpr int16_t MAX_VOLTAGE_DIGITAL = 3546;
     static constexpr float MOTOR_TORQUE_CONSTANT = 1.49f;  // mNm/A
+	static constexpr float MOTOR_IQ_CONV_CONSTANT = 3300.f/(5.f*100*4096.f);	//fixed-point representation of current to floating point (Amps)
     static constexpr float GEAR_RATIO_FINGERS = 649.0f;
     static constexpr float GEAR_RATIO_THUMB_ROTATOR = 162.45f;
     static constexpr float FSR_VOLTAGE_SCALE = 3.3f / 4096.0f;

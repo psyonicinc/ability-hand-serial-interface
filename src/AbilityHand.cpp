@@ -217,11 +217,8 @@ int AbilityHand::send_and_receive(buffer_t* tx_frame, int timeout_ms)
 {
     // Stuff the frame
     dartt_to_ppp(tx_frame, &tx_unstuff_alias_);
-    int rc = PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
-    if (rc != 0)
-    {
-        return ABH_ERROR_STUFF_FAILED;
-    }
+	PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+
 
     // Send the stuffed frame
     int bytes_written = serial_.write(tx_stuff_buf_.buf, static_cast<int>(tx_stuff_buf_.length));
@@ -249,16 +246,11 @@ int AbilityHand::send_and_receive(buffer_t* tx_frame, int timeout_ms)
 
     // Unstuff the frame
     rx_buffer_alias_.length = rxlen;
-    rc = PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
-    if (rc != 0)
-    {
-        stats_.num_parse_errors++;
-        return ABH_ERROR_UNSTUFF_FAILED;
-    }
+    PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
 
     // Parse the frame
     rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    rc = ahb_parse_movement_reply(&rx_frame_, &hand_state_);
+    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state_);
     if (rc != ABH_SUCCESS)
     {
         stats_.num_parse_errors++;
@@ -296,12 +288,12 @@ void AbilityHand::set_velocity_targets(const float velocities_deg_per_sec[NUM_CH
 void AbilityHand::set_torque_targets(const float torques_mNm[NUM_CHANNELS])
 {
     // Convert mNm to current using motor torque constant
-    // Note: This assumes a default current conversion ratio C=1
+    // Note: This assumes a default current conversion ratio
     // In production, C should be read from the hand via Bluetooth
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
         float current_amps = torques_mNm[ch] / MOTOR_TORQUE_CONSTANT;
-        hand_state_.iq_desired[ch] = (int16_t)current_amps;  // TODO: multiply by C
+        hand_state_.iq_desired[ch] = (int16_t)(current_amps / MOTOR_IQ_CONV_CONSTANT); 
     }
 }
 
@@ -346,11 +338,11 @@ void AbilityHand::get_velocities(float velocities_deg_per_sec[NUM_CHANNELS]) con
 
 void AbilityHand::get_currents(float currents_amps[NUM_CHANNELS]) const
 {
-    // Note: This assumes a default current conversion ratio C=1
+    // Note: This assumes a default current conversion ratio
     // In production, C should be read from the hand via Bluetooth
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
-        currents_amps[ch] = (float)hand_state_.iq[ch];  // TODO: divide by C
+        currents_amps[ch] = (float)hand_state_.iq[ch] * MOTOR_IQ_CONV_CONSTANT;
     }
 }
 

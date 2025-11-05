@@ -90,7 +90,6 @@ public:
 
     // Direct access to hand state (for advanced users)
     abh_api_t& get_hand_state();
-    const abh_api_t& get_hand_state() const;
 
 private:
     // Serial communication

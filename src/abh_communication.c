@@ -267,6 +267,7 @@ int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh)
 	if(reply_mode == 1 || reply_mode == 2)
 	{
 		abh_unpack_8bit_into_12bit(&frame->buf[bidx], abh->fsr_raw, NUM_FINGERS*NUM_FSR_PER_FINGER);
+		bidx += 45;	//total bytes
 	}
 	else if (reply_mode == 3)
 	{

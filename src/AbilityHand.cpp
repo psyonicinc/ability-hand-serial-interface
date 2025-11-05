@@ -394,8 +394,3 @@ abh_api_t& AbilityHand::get_hand_state()
 {
     return hand_state_;
 }
-
-const abh_api_t& AbilityHand::get_hand_state() const
-{
-    return hand_state_;
-}

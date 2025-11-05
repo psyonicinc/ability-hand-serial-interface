@@ -185,9 +185,18 @@ void test_abh_create_movement_frame_velocity_control(void)
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
 	TEST_ASSERT_EQUAL(15, tx.len);
 
-	// Verify velocity data is used
+	// Verify header
+	TEST_ASSERT_EQUAL(0x50, tx.buf[0]);
 	TEST_ASSERT_EQUAL(FIXED_VELOCITY_CONTROL_TX2, tx.buf[1]);
 
+	// Verify all channel velocities (little endian)
+	for(int ch = 0; ch < NUM_CHANNELS; ch++)
+	{
+		int16_t * pi16 = (int16_t*)(&tx.buf[2+ch*2]);
+		TEST_ASSERT_EQUAL(abh.velocity_desired[ch], *pi16);
+	}
+
+	// Verify checksum
 	uint8_t chk = abh_get_checksum(tx.buf, tx.len);
 	TEST_ASSERT_EQUAL(0, chk);
 }
@@ -213,8 +222,18 @@ void test_abh_create_movement_frame_torque_control(void)
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
 	TEST_ASSERT_EQUAL(15, tx.len);
 
+	// Verify header
+	TEST_ASSERT_EQUAL(0x50, tx.buf[0]);
 	TEST_ASSERT_EQUAL(FIXED_TORQUE_CONTROL_TX3, tx.buf[1]);
 
+	// Verify all channel currents (little endian)
+	for(int ch = 0; ch < NUM_CHANNELS; ch++)
+	{
+		int16_t * pi16 = (int16_t*)(&tx.buf[2+ch*2]);
+		TEST_ASSERT_EQUAL(abh.iq_desired[ch], *pi16);
+	}
+
+	// Verify checksum
 	uint8_t chk = abh_get_checksum(tx.buf, tx.len);
 	TEST_ASSERT_EQUAL(0, chk);
 }
@@ -240,8 +259,18 @@ void test_abh_create_movement_frame_voltage_control(void)
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
 	TEST_ASSERT_EQUAL(15, tx.len);
 
+	// Verify header
+	TEST_ASSERT_EQUAL(0x50, tx.buf[0]);
 	TEST_ASSERT_EQUAL(FIXED_VOLTAGE_CONTROL_TX1, tx.buf[1]);
 
+	// Verify all channel voltages (little endian)
+	for(int ch = 0; ch < NUM_CHANNELS; ch++)
+	{
+		int16_t * pi16 = (int16_t*)(&tx.buf[2+ch*2]);
+		TEST_ASSERT_EQUAL(abh.vq_desired[ch], *pi16);
+	}
+
+	// Verify checksum
 	uint8_t chk = abh_get_checksum(tx.buf, tx.len);
 	TEST_ASSERT_EQUAL(0, chk);
 }

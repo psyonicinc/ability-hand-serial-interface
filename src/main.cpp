@@ -1,5 +1,6 @@
 #include <iostream>
 #include <csignal>
+#include <chrono>
 #include "serial.h"
 #include "PPP.h"
 #include "abh_communication.h"
@@ -103,6 +104,10 @@ int main()
 
 	uint32_t num_writes = 0;
 	uint32_t num_successful_reads = 0;
+
+	// Start timing for frequency calculation
+	auto start_time = std::chrono::steady_clock::now();
+
 	while(g_running)
 	{
 		//set runtimet targets - load to fixed point format
@@ -150,15 +155,26 @@ int main()
 
 	}
 
+	// Calculate elapsed time and frequency
+	auto end_time = std::chrono::steady_clock::now();
+	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+	float elapsed_sec = elapsed_ms / 1000.0f;
+
 	// Print statistics before exit
 	printf("\n\n=== Exit Statistics ===\n");
-	printf("Total writes:           %u\n", num_writes);
-	printf("Successful reads:       %u\n", num_successful_reads);
-	printf("Timeouts:               %u\n", timeout_count);
 	if (num_writes > 0)
 	{
-		float success_rate = (float)num_successful_reads / (float)num_writes * 100.0f;
-		printf("Success rate:           %.2f%%\n", success_rate);
+		if (elapsed_sec > 0.0f)
+		{
+			float avg_frequency = (float)num_writes / elapsed_sec;
+			printf("Rate: %.2f Hz\n", avg_frequency);
+		}
+		printf("Writes: %u\n", num_writes);
+		printf("Reads: %u\n", num_successful_reads);
+
+		float success_rate = (1 - ((float)num_writes / (float)num_successful_reads)) * 100.0f;
+		printf("Packet Loss: %.2f%%\n", success_rate);
+
 	}
 	printf("=======================\n");
 

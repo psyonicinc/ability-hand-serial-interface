@@ -74,7 +74,7 @@ int append_uint16(uint16_t value, buffer_t * frame)
 /*
 * Create a 'retister write' frame with register address and value arguments
 */
-int abh_create_write_register_frame(abh_api_t * abh, uint32_t address, uint32_t value, buffer_t * frame)
+int abh_create_write_register_frame(abh_api_t * abh, uint32_t reg_address, uint32_t value, buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
@@ -88,7 +88,7 @@ int abh_create_write_register_frame(abh_api_t * abh, uint32_t address, uint32_t 
 	frame->len = 0;
 	frame->buf[frame->len++] = abh->address;
 	frame->buf[frame->len++] = abh->command_header;	
-	append_uint32(address, frame);	//overrun checked at start, so no need to handle rc
+	append_uint32(reg_address, frame);	//overrun checked at start, so no need to handle rc
 	append_uint32(value, frame);
 	frame->buf[frame->len] = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
 	frame->len++;
@@ -98,7 +98,7 @@ int abh_create_write_register_frame(abh_api_t * abh, uint32_t address, uint32_t 
 /*
 Read register request frame
 */
-int abh_create_read_register_frame(abh_api_t  * abh, uint32_t address, buffer_t * frame)
+int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
@@ -112,10 +112,18 @@ int abh_create_read_register_frame(abh_api_t  * abh, uint32_t address, buffer_t 
 	frame->len = 0;
 	frame->buf[frame->len++] = abh->address;
 	frame->buf[frame->len++] = abh->command_header;	
-	append_uint32(address, frame);	//overrun checked at start, so no need to handle rc
+	append_uint32(reg_address, frame);	//overrun checked at start, so no need to handle rc
 	frame->buf[frame->len] = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
 	frame->len++;
 	return ABH_SUCCESS;
+}
+
+/*
+Loads pass-by-reference result of read reply frame with the valid result, or returns with an error
+*/
+int abh_parse_read_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
+{
+	return 0;
 }
 
 /*

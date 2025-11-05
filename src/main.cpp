@@ -71,16 +71,7 @@ int main()
 		{
 			float q[NUM_CHANNELS] = {};
 			hand.get_positions(q);
-			// printf("%f, %f \n", q[5], ((float)hand.get_hand_state().q[5])/( 32767.0f / 150.0f) );
-			printf("%0.2X\n", hand.get_hand_state().hot_cold_bitmask);
-			// printf("(");
-			// for(int ch = 0; ch < NUM_CHANNELS - 1; ch++)
-			// {
-			// 	printf("%.2f, ", q[ch]);
-			// }
-			// printf("%.2f)", q[5]);
-			
-
+			// printf("%0.2X\n", hand.get_hand_state().hot_cold_bitmask);
 		}
 		// Check elapsed time (optional 60 second limit)
 

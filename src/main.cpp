@@ -99,7 +99,7 @@ int main()
 
 
 	//floating point targets
-	float fpos[NUM_CHANNELS] = {120.f, 10.f, 10.f, 10.f, 10.f, -50.f};
+	float fpos[NUM_CHANNELS] = {70.f, 10.f, 10.f, 10.f, 10.f, -50.f};
 	uint32_t timeout_count = 0;
 
 	uint32_t num_writes = 0;
@@ -172,7 +172,7 @@ int main()
 		printf("Writes: %u\n", num_writes);
 		printf("Reads: %u\n", num_successful_reads);
 
-		float success_rate = (1 - ((float)num_writes / (float)num_successful_reads)) * 100.0f;
+		float success_rate = (1 - ((float)num_successful_reads / (float)num_writes)) * 100.0f;
 		printf("Packet Loss: %.2f%%\n", success_rate);
 
 	}

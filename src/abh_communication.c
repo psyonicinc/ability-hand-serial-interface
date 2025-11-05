@@ -127,6 +127,14 @@ int abh_parse_read_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * 
 }
 
 /*
+Parse the response issued from a write register request
+*/
+int abh_parse_write_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
+{
+	return 0;
+}
+
+/*
  * For 3 byte frames - like read only, etc. 
  */
 int abh_create_short_api_frame(abh_api_t * abh, buffer_t * frame)

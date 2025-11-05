@@ -55,7 +55,7 @@ int main()
 	signal(SIGINT, signal_handler);
 
 	Serial s;
-	if(s.autoconnect(460800) == false)
+	if(s.autoconnect(921600) == false)
 		return -1;
 	abh_api_t abh = {};
 	abh.address = 0x50;
@@ -146,7 +146,8 @@ int main()
 		}
 		else if(rxlen == -2)
 		{
-			printf("Timeout %d\n", timeout_count++);
+			printf("Timeout %d\n", timeout_count);
+			timeout_count++;
 		}
 		else if(rxlen == 0)
 		{
@@ -166,7 +167,7 @@ int main()
 	{
 		if (elapsed_sec > 0.0f)
 		{
-			float avg_frequency = (float)num_writes / elapsed_sec;
+			float avg_frequency = (float)num_successful_reads / elapsed_sec;
 			printf("Rate: %.2f Hz\n", avg_frequency);
 		}
 		printf("Writes: %u\n", num_writes);

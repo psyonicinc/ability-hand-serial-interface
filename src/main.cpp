@@ -1,7 +1,20 @@
 #include <iostream>
+#include <csignal>
 #include "serial.h"
 #include "PPP.h"
 #include "abh_communication.h"
+
+// Global flag for signal handling
+volatile sig_atomic_t g_running = 1;
+
+// Signal handler for Ctrl+C
+void signal_handler(int signal)
+{
+	if (signal == SIGINT)
+	{
+		g_running = 0;
+	}
+}
 
 int dartt_to_ppp(buffer_t * in, ppp_buffer_t * out)
 {
@@ -35,8 +48,11 @@ void init_ppp_buffer(ppp_buffer_t * buf, unsigned char * mem, size_t size)
 	buf->length = 0;
 }
 
-int main() 
+int main()
 {
+	// Register signal handler for Ctrl+C
+	signal(SIGINT, signal_handler);
+
 	Serial s;
 	if(s.autoconnect(460800) == false)
 		return -1;
@@ -85,7 +101,9 @@ int main()
 	float fpos[NUM_CHANNELS] = {120.f, 10.f, 10.f, 10.f, 10.f, -50.f};
 	uint32_t timeout_count = 0;
 
-	while(1)
+	uint32_t num_writes = 0;
+	uint32_t num_successful_reads = 0;
+	while(g_running)
 	{
 		//set runtimet targets - load to fixed point format
 		for(int ch = 0; ch < NUM_CHANNELS; ch++)
@@ -100,6 +118,7 @@ int main()
 		unstuff_alias.length = tx_frame.len;	//can do just len copy since buf and size are static and initialized before the while loop
 		int rc = PPP_stuff(&unstuff_alias, &stuff_buf);
 		s.write(stuff_buf.buf, (int)stuff_buf.length);
+		num_writes++;
 
 		//read and parse the response 
 		int rxlen = s.read_dual_delimiter(rx_buffer_alias.buf, rx_buffer_alias.size, '~', 5);
@@ -114,8 +133,11 @@ int main()
 			{
 				printf("Parsing error! rxlen = %d, %d\n", rc, rx_frame.len);
 			}
-			
-			printf("%d, %d\n", abh.fsr_raw[29], abh.q[5]);
+			else
+			{
+				num_successful_reads++;
+				// printf("%d, %d\n", abh.fsr_raw[29], abh.q[5]);
+			}
 		}
 		else if(rxlen == -2)
 		{
@@ -127,5 +149,19 @@ int main()
 		}
 
 	}
+
+	// Print statistics before exit
+	printf("\n\n=== Exit Statistics ===\n");
+	printf("Total writes:           %u\n", num_writes);
+	printf("Successful reads:       %u\n", num_successful_reads);
+	printf("Timeouts:               %u\n", timeout_count);
+	if (num_writes > 0)
+	{
+		float success_rate = (float)num_successful_reads / (float)num_writes * 100.0f;
+		printf("Success rate:           %.2f%%\n", success_rate);
+	}
+	printf("=======================\n");
+
+	s.disconnect();
     return 0;
 }

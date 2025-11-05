@@ -229,7 +229,7 @@ int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh)
 	}
 	int bidx = 0;
 	abh->format_header = frame->buf[bidx++];
-	uint8_t reply_mode = abh->format_header & 0x0F;
+	uint8_t reply_mode = (abh->format_header & 0x0F) + 1;
 	if(reply_mode < 1 || reply_mode > 3)
 	{
 		return ABH_ERROR_INVALID_REPLY_MODE;	//placeholder, enumerate explicit error codes later

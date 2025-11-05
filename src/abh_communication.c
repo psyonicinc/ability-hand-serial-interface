@@ -244,7 +244,7 @@ int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh)
 		abh->q[ch] = (int16_t)tmpl;
 
 		//extract second value
-		tmpl |= (uint16_t)(frame->buf[bidx++]);
+		tmpl = (uint16_t)(frame->buf[bidx++]);
 		tmpl |= (((uint16_t)(frame->buf[bidx++])) << 8);
 
 		if(reply_mode == 1 || reply_mode == 3)
@@ -258,7 +258,7 @@ int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh)
 	}
 	if(reply_mode == 1 || reply_mode == 2)
 	{
-		abh_unpack_8bit_into_12bit((uint8_t*)frame->buf[bidx], abh->fsr_raw, 6);
+		abh_unpack_8bit_into_12bit(&frame->buf[bidx], abh->fsr_raw, NUM_FINGERS*NUM_FSR_PER_FINGER);
 	}
 	else if (reply_mode == 3)
 	{

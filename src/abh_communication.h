@@ -67,8 +67,8 @@ typedef struct abh_api_t
 }abh_api_t;
 
 uint8_t abh_get_checksum(uint8_t * arr, int size);
-int abh_create_write_register_frame(abh_api_t * abh, uint32_t address, uint32_t value, buffer_t * frame);
-int abh_create_read_register_frame(abh_api_t  * abh, uint32_t address, buffer_t * frame);
+int abh_create_write_register_frame(abh_api_t * abh, uint32_t reg_address, uint32_t value, buffer_t * frame);
+int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, buffer_t * frame);
 int abh_parse_read_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * reply_word);
 int abh_create_short_api_frame(abh_api_t * abh, buffer_t * frame);
 int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame);

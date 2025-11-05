@@ -49,6 +49,52 @@ void init_ppp_buffer(ppp_buffer_t * buf, unsigned char * mem, size_t size)
 	buf->length = 0;
 }
 
+
+int blocking_ble_radio_setting_change(abh_api_t* abh, buffer_t * tx_frame, ppp_buffer_t * unstuff_alias, ppp_buffer_t * stuff_buf, ppp_buffer_t * rx_buffer_alias, ppp_buffer_t * rx_ppp_unstuff_alias, buffer_t * rx_frame,  Serial& s)
+{
+		//start bluetooth radio enable/disable
+	abh->command_header = ENABLE_BLUETOOTH_RADIO;
+	abh_create_short_api_frame(abh, tx_frame);
+	unstuff_alias->length = tx_frame->len;	//can do just len copy since buf and size are static and initialized before the while loop
+	int rc = PPP_stuff(unstuff_alias, stuff_buf);
+	s.write(stuff_buf->buf, (int)stuff_buf->length);
+	bool ready = false;
+	abh->command_header = FIXED_DUMMY_TX1;
+	printf("waiting for hand to restart...\n");
+	uint32_t num_successful_reads = 0;
+	while(ready == false)
+	{
+		abh_create_short_api_frame(abh, tx_frame);
+		unstuff_alias->length = tx_frame->len;	//can do just len copy since buf and size are static and initialized before the while loop
+		int rc = PPP_stuff(unstuff_alias, stuff_buf);
+		s.write(stuff_buf->buf, (int)stuff_buf->length);
+		int rxlen = s.read_dual_delimiter(rx_buffer_alias->buf, rx_buffer_alias->size, '~', 5);
+		if(rxlen >= 0)
+		{
+			rx_buffer_alias->length = rxlen;	//make sure length gets loaded - serial doesn't natively work with buffer types
+			PPP_unstuff(rx_ppp_unstuff_alias, rx_buffer_alias);
+			// print_ppp_buf(&rx_ppp_unstuff_alias);
+			rx_frame->len = rx_ppp_unstuff_alias->length;
+			int rc = ahb_parse_movement_reply(rx_frame, abh);
+			if(rc != ABH_SUCCESS)
+			{
+				printf("Parsing error! rxlen = %d, %d\n", rc, rx_frame->len);
+			}
+			else
+			{
+				num_successful_reads++;
+			}
+		}
+		if(num_successful_reads > 1000)
+		{
+			ready = true;
+		}
+	}
+	
+	printf("restart complete\n");
+	return 0;
+}
+
 int main()
 {
 	// Register signal handler for Ctrl+C
@@ -58,7 +104,7 @@ int main()
 	if(s.autoconnect(921600) == false)
 		return -1;
 	abh_api_t abh = {};
-	abh.address = 0x50;
+	abh.address = 0x50;	
 	abh.command_header = FIXED_POSITION_CONTROL_TX1;
 	
 	//initialize tx buffer
@@ -108,6 +154,11 @@ int main()
 	// Start timing for frequency calculation
 	auto start_time = std::chrono::steady_clock::now();
 
+
+	// blocking_ble_radio_setting_change(&abh, &tx_frame, &unstuff_alias, &stuff_buf, &rx_buffer_alias, &rx_ppp_unstuff_alias, &rx_frame, s);
+	
+
+	abh.command_header = FIXED_POSITION_CONTROL_TX1;
 	while(g_running)
 	{
 		//set runtimet targets - load to fixed point format
@@ -169,6 +220,7 @@ int main()
 		{
 			float avg_frequency = (float)num_successful_reads / elapsed_sec;
 			printf("Rate: %.2f Hz\n", avg_frequency);
+			printf("Duration: %f sec\n",elapsed_sec);
 		}
 		printf("Writes: %u\n", num_writes);
 		printf("Reads: %u\n", num_successful_reads);

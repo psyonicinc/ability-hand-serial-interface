@@ -27,12 +27,13 @@ int dartt_to_ppp(buffer_t * in, ppp_buffer_t * out)
 
 void print_ppp_buf(ppp_buffer_t * in)
 {
-	printf("0x");
-	for(int i = 0; i < in->length; i++)
+	printf("= {");
+	for(int i = 0; i < in->length-1; i++)
 	{
-		printf("%0.2X", in->buf[i]);
+		
+		printf("0x%0.2X, ", in->buf[i]);
 	}
-	printf("\n");
+	printf("0x%0.2X};\n", in->buf[in->length-1]);
 }
 
 void init_buffer(buffer_t * buf, unsigned char * mem, size_t size)
@@ -156,13 +157,22 @@ int main()
 
 	// blocking_ble_radio_setting_change(ENABLE_BLUETOOTH_RADIO, &abh, &tx_frame, &unstuff_alias, &stuff_buf, &rx_buffer_alias, &rx_ppp_unstuff_alias, &rx_frame, s);
 	// blocking_ble_radio_setting_change(DISABLE_BLUETOOTH_RADIO, &abh, &tx_frame, &unstuff_alias, &stuff_buf, &rx_buffer_alias, &rx_ppp_unstuff_alias, &rx_frame, s);
-	
+	// for(int i = 0; i < NUM_CHANNELS; i++)
+	// {
+	// 	abh.vq_desired[i] = 0;
+	// }
+	// abh.command_header = FIXED_VOLTAGE_CONTROL_TX1;
+	// abh_create_movement_frame(&abh, &tx_frame);
+	// unstuff_alias.length = tx_frame.len;
+	// PPP_stuff(&unstuff_alias, &stuff_buf);
+	// print_ppp_buf(&stuff_buf);
+
 
 	abh.command_header = FIXED_POSITION_CONTROL_TX1;
 	auto start_time = std::chrono::steady_clock::now();
 	while(g_running)
 	{
-		const uint8_t tx_command[] = {0x7E, 0x50, 0x10, 0xBB, 0x3B, 0x88, 0x08, 0x88, 0x08, 0x88, 0x08, 0x88, 0x08, 0x12, 0xD1, 0x87, 0x7E};
+		const uint8_t tx_command[] = {0x7E, 0x50, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x7E};
 		s.write((uint8_t*)tx_command, sizeof(tx_command));
 		num_writes++;
 

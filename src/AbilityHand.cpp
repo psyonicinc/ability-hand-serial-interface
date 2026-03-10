@@ -30,11 +30,34 @@ AbilityHand::~AbilityHand()
 int AbilityHand::init_udp(const char * ip, uint16_t port)
 {
 	init_buffers();
+	for(int i = 0; i < sizeof(m_socket.ip); i++)
+	{
+		m_socket.ip[i] = 0;
+	}
+	int retl = snprintf(m_socket.ip, sizeof(m_socket.ip), "%s", ip);		//consider checking returned size to avoid issues related to null termination
+	if(retl >= sizeof(m_socket.ip))
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	bool is_null_terminated = false;
+	for(int i = 0; i < sizeof(m_socket.ip); i++)
+	{
+		if(m_socket.ip[i] == 0)
+		{
+			is_null_terminated = true;
+			break;
+		}
+	}
+	if(is_null_terminated == false)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+
+	m_socket.port = port;
 	bool success = udp_connect(&m_socket);
 	if(success)
 	{
 		iface_ = IFACE_UDP;
-		printf("Connected to socket successfully\n");
 		return ABH_SUCCESS;
 	}
 	else

@@ -23,19 +23,26 @@
 // Global flag for signal handling
 volatile sig_atomic_t g_running = 1;
 
-// Signal handler for Ctrl+C
+// Signal handler for Ctrl+C and segfaults
 void signal_handler(int signal)
 {
 	if (signal == SIGINT)
 	{
 		g_running = 0;
 	}
+	else if (signal == SIGSEGV)
+	{
+		printf("SEGFAULT caught - check pointer initialization\n");
+		fflush(stdout);
+		exit(1);
+	}
 }
 
 int main()
 {
-	// Register signal handler for Ctrl+C
+	// Register signal handlers
 	signal(SIGINT, signal_handler);
+	signal(SIGSEGV, signal_handler);
 	if (tcs_lib_init() != TCS_SUCCESS)
 	{
 		printf("Failed to initialize tinycsocket\n");

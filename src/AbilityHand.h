@@ -97,7 +97,7 @@ private:
 
     // TX buffers (unstuffed → stuffed)
     unsigned char tx_mem_[128];
-    buffer_t tx_frame_;
+    abh_buffer_t tx_frame_;
     ppp_buffer_t tx_unstuff_alias_;
 
     unsigned char tx_stuffed_mem_[258];  // 128*2 + 2 delimiters
@@ -109,7 +109,7 @@ private:
 
     unsigned char rx_unstuff_mem_[128];
     ppp_buffer_t rx_ppp_unstuff_alias_;
-    buffer_t rx_frame_;
+    abh_buffer_t rx_frame_;
 
     // Hand state
     abh_api_t hand_state_;
@@ -134,8 +134,8 @@ private:
 
     // Helper methods
     void init_buffers();
-    int send_and_receive(buffer_t* tx_frame, int timeout_ms);
-    void dartt_to_ppp(buffer_t* in, ppp_buffer_t* out);
+    int send_and_receive(abh_buffer_t* tx_frame, int timeout_ms);
+    void dartt_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
 };
 
 #endif // ABILITY_HAND_H

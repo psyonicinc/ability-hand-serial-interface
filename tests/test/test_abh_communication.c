@@ -6,7 +6,7 @@ void test_abh_create_read_register_frame(void)
 	abh_api_t abh;
 	abh.address = 0x50;
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 	int rc = abh_create_read_register_frame(&abh, 0x12, &tx);
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
 	TEST_ASSERT_EQUAL(0x50, tx.buf[0]);
@@ -20,7 +20,7 @@ void test_abh_create_write_register_frame(void)
 	abh_api_t abh;
 	abh.address = 0x50;
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	// Test basic write register frame creation
 	int rc = abh_create_write_register_frame(&abh, 0xDEADBEEF, 0x12345678, &tx);
@@ -48,7 +48,7 @@ void test_abh_create_write_register_frame_null_checks(void)
 {
 	abh_api_t abh;
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	// Test NULL abh pointer
 	int rc = abh_create_write_register_frame(NULL, 0, 0, &tx);
@@ -69,7 +69,7 @@ void test_abh_create_write_register_frame_buffer_overrun(void)
 	abh_api_t abh;
 	abh.address = 0x50;
 	unsigned char tx_mem[5] = {};  // Too small
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_write_register_frame(&abh, 0, 0, &tx);
 	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
@@ -81,7 +81,7 @@ void test_abh_create_short_api_frame(void)
 	abh.address = 0x50;
 	abh.command_header = FIXED_DUMMY_TX1;  // Read only mode variant 1
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_short_api_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
@@ -99,7 +99,7 @@ void test_abh_create_short_api_frame_null_checks(void)
 {
 	abh_api_t abh;
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	// Test NULL abh
 	int rc = abh_create_short_api_frame(NULL, &tx);
@@ -121,7 +121,7 @@ void test_abh_create_short_api_frame_buffer_overrun(void)
 	abh.address = 0x50;
 	abh.command_header = FIXED_DUMMY_TX2;
 	unsigned char tx_mem[2] = {};  // Too small
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_short_api_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
@@ -142,7 +142,7 @@ void test_abh_create_movement_frame_position_control(void)
 	abh.q_desired[5] = 600;
 
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_movement_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
@@ -179,7 +179,7 @@ void test_abh_create_movement_frame_velocity_control(void)
 	abh.velocity_desired[5] = -600;
 
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_movement_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
@@ -216,7 +216,7 @@ void test_abh_create_movement_frame_torque_control(void)
 	abh.iq_desired[5] = 100;
 
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_movement_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
@@ -253,7 +253,7 @@ void test_abh_create_movement_frame_voltage_control(void)
 	abh.vq_desired[5] = 0;
 
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_movement_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
@@ -282,7 +282,7 @@ void test_abh_create_movement_frame_invalid_header(void)
 	abh.command_header = 0xFF;  // Invalid header
 
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_movement_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_HEADER, rc);
@@ -292,7 +292,7 @@ void test_abh_create_movement_frame_null_checks(void)
 {
 	abh_api_t abh;
 	unsigned char tx_mem[128] = {};
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	// Test NULL abh
 	int rc = abh_create_movement_frame(NULL, &tx);
@@ -309,7 +309,7 @@ void test_abh_create_movement_frame_buffer_overrun(void)
 	abh.address = 0x50;
 	abh.command_header = FIXED_POSITION_CONTROL_TX1;
 	unsigned char tx_mem[10] = {};  // Too small
-	buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
+	abh_buffer_t tx = {.buf = tx_mem, .len = 0, .size = sizeof(tx_mem)};
 
 	int rc = abh_create_movement_frame(&abh, &tx);
 	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);

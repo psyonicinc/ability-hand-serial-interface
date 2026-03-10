@@ -24,7 +24,7 @@ int main()
 
 	// Create and initialize AbilityHand
 	AbilityHand hand;
-	if (hand.init(921600) != ABH_SUCCESS)
+	if (hand.init(460800) != ABH_SUCCESS)
 	{
 		printf("Failed to connect to hand\n");
 		return -1;

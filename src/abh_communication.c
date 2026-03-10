@@ -34,9 +34,9 @@ void abh_unpack_8bit_into_12bit(uint8_t* arr, uint16_t* vals, int valsize)
 }
 
 /**
- * Helper function to append a uint32_t to the end of a buffer_t, little endian
+ * Helper function to append a uint32_t to the end of a abh_buffer_t, little endian
  */
-int append_uint32(uint32_t value, buffer_t * frame)
+int append_uint32(uint32_t value, abh_buffer_t * frame)
 {
 	if(frame == NULL)
 	{
@@ -54,9 +54,9 @@ int append_uint32(uint32_t value, buffer_t * frame)
 }
 
 /**
- * Helper function to append a uint16_t to the end of a buffer_t, little endian
+ * Helper function to append a uint16_t to the end of a abh_buffer_t, little endian
  */
-int append_uint16(uint16_t value, buffer_t * frame)
+int append_uint16(uint16_t value, abh_buffer_t * frame)
 {
 	if(frame == NULL)
 	{
@@ -74,7 +74,7 @@ int append_uint16(uint16_t value, buffer_t * frame)
 /*
 * Create a 'retister write' frame with register address and value arguments
 */
-int abh_create_write_register_frame(abh_api_t * abh, uint32_t reg_address, uint32_t value, buffer_t * frame)
+int abh_create_write_register_frame(abh_api_t * abh, uint32_t reg_address, uint32_t value, abh_buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
@@ -98,7 +98,7 @@ int abh_create_write_register_frame(abh_api_t * abh, uint32_t reg_address, uint3
 /*
 Read register request frame
 */
-int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, buffer_t * frame)
+int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
@@ -121,7 +121,7 @@ int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, buffe
 /*
 Loads pass-by-reference result of read reply frame with the valid result, or returns with an error
 */
-int abh_parse_read_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
+int abh_parse_read_register_reply(abh_buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
 {
 	return 0;
 }
@@ -129,7 +129,7 @@ int abh_parse_read_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * 
 /*
 Parse the response issued from a write register request
 */
-int abh_parse_write_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
+int abh_parse_write_register_reply(abh_buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
 {
 	return 0;
 }
@@ -137,7 +137,7 @@ int abh_parse_write_register_reply(buffer_t * frame, abh_api_t * abh, uint32_t *
 /*
  * For 3 byte frames - like read only, etc. 
  */
-int abh_create_short_api_frame(abh_api_t * abh, buffer_t * frame)
+int abh_create_short_api_frame(abh_api_t * abh, abh_buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
@@ -161,7 +161,7 @@ int abh_create_short_api_frame(abh_api_t * abh, buffer_t * frame)
  * Create a pre-encoding/framing ability hand control frame
  * 
  */
-int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
+int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame)
 {
 	if(abh == NULL || frame == NULL || frame->size == 0)
 	{
@@ -223,7 +223,7 @@ int abh_create_movement_frame(abh_api_t * abh, buffer_t * frame)
 /*
 Blocking function to parse ability hand frame response/reply
  */
-int ahb_parse_movement_reply(buffer_t * frame, abh_api_t * abh)
+int ahb_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 {
 	if(frame == NULL || abh == NULL || frame->len == 0)
 	{

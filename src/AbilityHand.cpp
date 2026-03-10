@@ -213,7 +213,7 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
     return send_and_receive(&tx_frame_, timeout_ms);
 }
 
-int AbilityHand::send_and_receive(buffer_t* tx_frame, int timeout_ms)
+int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
 {
     // Stuff the frame
     dartt_to_ppp(tx_frame, &tx_unstuff_alias_);
@@ -262,7 +262,7 @@ int AbilityHand::send_and_receive(buffer_t* tx_frame, int timeout_ms)
     return ABH_SUCCESS;
 }
 
-void AbilityHand::dartt_to_ppp(buffer_t* in, ppp_buffer_t* out)
+void AbilityHand::dartt_to_ppp(abh_buffer_t* in, ppp_buffer_t* out)
 {
     out->buf = in->buf;
     out->length = in->len;

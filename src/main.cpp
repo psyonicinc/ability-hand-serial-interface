@@ -100,8 +100,9 @@ int main()
 		}
 		// Check elapsed time (optional 60 second limit)
 
-		if (elapsed_sec >= 60.0f)
+		if (elapsed_sec >= 10.0f)
 		{
+			printf("Leaving\n");
 			break;
 		}
 	}

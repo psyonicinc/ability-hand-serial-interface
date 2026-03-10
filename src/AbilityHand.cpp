@@ -17,6 +17,7 @@ AbilityHand::AbilityHand()
     memset(tx_stuffed_mem_, 0, sizeof(tx_stuffed_mem_));
     memset(rx_stuffed_mem_, 0, sizeof(rx_stuffed_mem_));
     memset(rx_unstuff_mem_, 0, sizeof(rx_unstuff_mem_));
+	iface_ = IFACE_SERIAL;
 	m_socket = { TCS_SOCKET_INVALID, "192.168.1.100", 5000, false };
 }
 
@@ -28,9 +29,11 @@ AbilityHand::~AbilityHand()
 
 int AbilityHand::init_udp(const char * ip, uint16_t port)
 {
+	init_buffers();
 	bool success = udp_connect(&m_socket);
 	if(success)
 	{
+		iface_ = IFACE_UDP;
 		printf("Connected to socket successfully\n");
 		return ABH_SUCCESS;
 	}
@@ -84,8 +87,15 @@ void AbilityHand::disconnect()
 
 bool AbilityHand::is_connected() const
 {
-    // Cast away const since Serial::connected() is not const
-    return const_cast<Serial&>(serial_).connected();
+	if(iface_ == IFACE_SERIAL)
+	{
+		// Cast away const since Serial::connected() is not const
+	    return const_cast<Serial&>(serial_).connected();
+	}
+	else
+	{
+		return m_socket.connected;
+	}
 }
 
 void AbilityHand::init_buffers()
@@ -202,7 +212,7 @@ int AbilityHand::exchange_motion_data(int timeout_ms)
     {
         return ABH_ERROR_NOT_CONNECTED;
     }
-
+	
     // Create movement frame
     int rc = abh_create_movement_frame(&hand_state_, &tx_frame_);
     if (rc != ABH_SUCCESS)
@@ -288,7 +298,8 @@ int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
 	}
 	else
 	{
-		
+		printf("Help\n");
+		return 0;
 	}
 }
 

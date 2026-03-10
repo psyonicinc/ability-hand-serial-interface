@@ -26,18 +26,18 @@ AbilityHand::~AbilityHand()
 	udp_disconnect(&m_socket);
 }
 
-int AbilityHand::init(const char * ip, uint16_t port)
+int AbilityHand::init_udp(const char * ip, uint16_t port)
 {
 	bool success = udp_connect(&m_socket);
 	if(success)
 	{
 		printf("Connected to socket successfully\n");
-		return 0;
+		return ABH_SUCCESS;
 	}
 	else
 	{
 		printf("Failed to connect to socket\n");
-		return -1;
+		return ABH_ERROR_NOT_CONNECTED;
 	}
 }
 

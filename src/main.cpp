@@ -36,19 +36,6 @@ int main()
 {
 	// Register signal handler for Ctrl+C
 	signal(SIGINT, signal_handler);
-
-	// Create and initialize AbilityHand
-	AbilityHand hand;
-	if (hand.init(460800) != ABH_SUCCESS)
-	{
-		printf("Failed to connect to hand via serial\n");
-		// return -1;
-	}
-	else
-	{
-		printf("Connected to Ability Hand successfully\n");
-	}
-	
 	if (tcs_lib_init() != TCS_SUCCESS)
 	{
 		printf("Failed to initialize tinycsocket\n");
@@ -58,8 +45,18 @@ int main()
 		printf("Initialize tinycsocket library success\n");
 	}
 
-	udp_connect(&hand.m_socket);
-
+	// Create and initialize AbilityHand
+	AbilityHand hand;
+	if (hand.init_udp("10.0.4.151", 5067) != ABH_SUCCESS)
+	{
+		printf("Failed to connect to hand via serial\n");
+		// return -1;
+	}
+	else
+	{
+		printf("Connected to Ability Hand successfully\n");
+	}
+	
 	// Set motion control mode
 	hand.set_motion_mode(AbilityHand::POSITION_MODE_TX1);
 

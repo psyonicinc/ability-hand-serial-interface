@@ -67,7 +67,7 @@ public:
     // Initialization
     int init(unsigned long baud_rate = 921600);
     int init(const char* port_name, unsigned long baud_rate = 921600);
-	int init(const char * ip, uint16_t port);
+	int init_udp(const char * ip, uint16_t port);
     void disconnect();
     bool is_connected() const;
 

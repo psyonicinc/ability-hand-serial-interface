@@ -146,9 +146,10 @@ private:
     // Helper methods
     void init_buffers();
     int send_and_receive(abh_buffer_t* tx_frame, int timeout_ms);
-    void dartt_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
+    void abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
 
 	int send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms);	//internal helper for serial comms only
+	int send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms);
 };
 
 #endif // ABILITY_HAND_H

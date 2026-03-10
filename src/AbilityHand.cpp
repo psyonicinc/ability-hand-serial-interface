@@ -239,12 +239,63 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
 
     return send_and_receive(&tx_frame_, timeout_ms);
 }
+int AbilityHand::send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms)
+{
+	// Stuff the frame
+    abh_to_ppp(tx_frame, &tx_unstuff_alias_);
+	PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+	if (!m_socket.connected)
+	{
+		return ABH_ERROR_NOT_CONNECTED;
+	}
+	size_t bytes_sent = 0;
+	TcsResult res = tcs_send(m_socket.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_FLAG_NONE, &bytes_sent);
+	if(res == TCS_SUCCESS && bytes_sent == tx_stuff_buf_.length)
+	{
+		stats_.num_writes++;
+	}
+	else
+	{
+		return ABH_ERROR_WRITE_FAILED;
+	}
 
+	struct TcsAddress src;
+	size_t bytes_received = 0;
+	tcs_opt_receive_timeout_set(m_socket.socket, timeout_ms);
+	res = tcs_receive_from(m_socket.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_FLAG_NONE, &src, &bytes_received);
+	if(res == TCS_SUCCESS)
+	{
+		rx_buffer_alias_.length = bytes_received;
+	}
+	else
+	{
+		rx_buffer_alias_.length = 0;
+		return ABH_ERROR_TIMEOUT;
+	}
+	if(bytes_received == 0)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
+
+	// Parse the frame
+    rx_frame_.len = rx_ppp_unstuff_alias_.length;
+    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state_);
+    if (rc != ABH_SUCCESS)
+    {
+        stats_.num_parse_errors++;
+        return rc;
+    }
+
+    // Success
+    stats_.num_successful_reads++;
+    return ABH_SUCCESS;
+}
 
 int AbilityHand::send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms)
 {
 	    // Stuff the frame
-    dartt_to_ppp(tx_frame, &tx_unstuff_alias_);
+    abh_to_ppp(tx_frame, &tx_unstuff_alias_);
 	PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
 
 
@@ -258,7 +309,7 @@ int AbilityHand::send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms)
     }
 
     // Read response
-    int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, rx_buffer_alias_.size, '~', timeout_ms);
+    int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
 
     if (rxlen == -2)
     {
@@ -298,12 +349,11 @@ int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
 	}
 	else
 	{
-		printf("Help\n");
-		return 0;
+		return send_recieve_udp(tx_frame, timeout_ms);
 	}
 }
 
-void AbilityHand::dartt_to_ppp(abh_buffer_t* in, ppp_buffer_t* out)
+void AbilityHand::abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out)
 {
     out->buf = in->buf;
     out->length = in->len;

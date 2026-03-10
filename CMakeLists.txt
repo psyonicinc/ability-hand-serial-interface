@@ -16,6 +16,13 @@ add_executable(${PROJECT_NAME}
 	src/AbilityHand.cpp
 )
 
+# add windows socket libraries if on windows only for tinycsocket
+if(WIN32)
+    # tinycsocket socket libraries
+    target_link_libraries(${PROJECT_NAME} PRIVATE wsock32 ws2_32 iphlpapi)
+endif()
+
+
 # Link serial-cross-platform library
 target_link_libraries(${PROJECT_NAME} 
 	PRIVATE

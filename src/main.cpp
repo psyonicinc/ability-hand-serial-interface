@@ -1,7 +1,20 @@
+#include <cstdio>
+
+#define TINYCSOCKET_IMPLEMENTATION
+
+// Platform headers (must come before GL on Windows)
+#ifdef _WIN32
+#define NOMINMAX
+#include <winsock2.h>
+#include <windows.h>
+#endif
+
+// tinycsocket (must come before SDL - SDL redefines main to SDL_main)
+#include "tinycsocket.h"
+
 #include <iostream>
 #include <csignal>
 #include <chrono>
-#include <cstdio>
 #include <math.h>
 #include "AbilityHand.h"
 
@@ -26,11 +39,24 @@ int main()
 	AbilityHand hand;
 	if (hand.init(460800) != ABH_SUCCESS)
 	{
-		printf("Failed to connect to hand\n");
-		return -1;
+		printf("Failed to connect to hand via serial\n");
+		// return -1;
+	}
+	else
+	{
+		printf("Connected to Ability Hand successfully\n");
+	}
+	
+	if (tcs_lib_init() != TCS_SUCCESS)
+	{
+		printf("Failed to initialize tinycsocket\n");
+	}
+	else
+	{
+		printf("Initialize tinycsocket library success\n");
 	}
 
-	printf("Connected to Ability Hand successfully\n");
+	
 
 	// Set motion control mode
 	hand.set_motion_mode(AbilityHand::POSITION_MODE_TX1);

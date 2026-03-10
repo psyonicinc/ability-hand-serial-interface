@@ -230,9 +230,10 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
     return send_and_receive(&tx_frame_, timeout_ms);
 }
 
-int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
+
+int AbilityHand::send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms)
 {
-    // Stuff the frame
+	    // Stuff the frame
     dartt_to_ppp(tx_frame, &tx_unstuff_alias_);
 	PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
 
@@ -277,6 +278,18 @@ int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
     // Success
     stats_.num_successful_reads++;
     return ABH_SUCCESS;
+}
+
+int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
+{
+	if(iface_ == IFACE_SERIAL)
+	{
+		return send_recieve_serial(tx_frame, timeout_ms);
+	}
+	else
+	{
+		
+	}
 }
 
 void AbilityHand::dartt_to_ppp(abh_buffer_t* in, ppp_buffer_t* out)

@@ -47,8 +47,8 @@ public:
     };
 
 	enum CommType {
-		SERIAL,
-		UDP
+		IFACE_SERIAL,
+		IFACE_UDP
 	};
 
     // Statistics structure
@@ -99,9 +99,12 @@ public:
     abh_api_t& get_hand_state();
 
 	UdpState m_socket;
+
 private:
     // Serial communication
     Serial serial_;
+	
+	CommType iface_;
 
     // TX buffers (unstuffed → stuffed)
     unsigned char tx_mem_[128];
@@ -144,6 +147,8 @@ private:
     void init_buffers();
     int send_and_receive(abh_buffer_t* tx_frame, int timeout_ms);
     void dartt_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
+
+	int send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms);	//internal helper for serial comms only
 };
 
 #endif // ABILITY_HAND_H

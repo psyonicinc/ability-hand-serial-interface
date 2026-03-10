@@ -81,42 +81,48 @@ int main()
 	int64_t start_ms = millis_now();
 
 	// Main control loop
+	uint64_t comm_ts = 0;
 	while(g_running)
 	{
 		int64_t elapsed_ms = millis_now() - start_ms;
-		float elapsed_sec = elapsed_ms / 1000.0f;
-		for(int ch = 0; ch < NUM_CHANNELS; ch++)
-		{
-			positions[ch] = ((sin(elapsed_sec+(float)ch)+1)/2)*50 + 10;
-		}
 
-		// Set desired positions
-		positions[5] = -55.f;  // Override last channel
-		hand.set_position_targets(positions);
+		if(elapsed_ms - comm_ts > 10)
+		{
+			comm_ts = elapsed_ms;
+			float elapsed_sec = elapsed_ms / 1000.0f;
+			for(int ch = 0; ch < NUM_CHANNELS; ch++)
+			{
+				positions[ch] = ((sin(elapsed_sec+(float)ch)+1)/2)*50 + 10;
+			}
 
-		// Exchange data with hand
-		int rc = hand.exchange_motion_data(5);
+			// Set desired positions
+			positions[5] = -55.f;  // Override last channel
+			hand.set_position_targets(positions);
 
-		if (rc == ABH_ERROR_TIMEOUT)
-		{
-			printf("Timeout\n");
-		}
-		else if (rc != ABH_SUCCESS)
-		{
-			printf("Error: %d\n", rc);
-		}
-		else
-		{
-			float q[NUM_CHANNELS] = {};
-			hand.get_positions(q);
-			// printf("%0.2X\n", hand.get_hand_state().hot_cold_bitmask);
-		}
-		// Check elapsed time (optional 60 second limit)
+			// Exchange data with hand
+			int rc = hand.exchange_motion_data(5);
 
-		if (elapsed_sec >= 10.0f)
-		{
-			printf("Leaving\n");
-			break;
+			if (rc == ABH_ERROR_TIMEOUT)
+			{
+				printf("Timeout\n");
+			}
+			else if (rc != ABH_SUCCESS)
+			{
+				printf("Error: %d\n", rc);
+			}
+			else
+			{
+				float q[NUM_CHANNELS] = {};
+				hand.get_positions(q);
+				// printf("%0.2X\n", hand.get_hand_state().hot_cold_bitmask);
+			}
+			// Check elapsed time (optional 60 second limit)
+
+			if (elapsed_sec >= 10.0f)
+			{
+				printf("Leaving\n");
+				break;
+			}
 		}
 	}
 

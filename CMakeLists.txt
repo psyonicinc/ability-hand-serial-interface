@@ -14,6 +14,7 @@ add_executable(${PROJECT_NAME}
     src/main.cpp
 	src/abh_communication.c
 	src/AbilityHand.cpp
+	src/udp.cpp
 )
 
 # add windows socket libraries if on windows only for tinycsocket

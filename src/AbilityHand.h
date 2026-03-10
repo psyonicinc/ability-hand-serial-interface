@@ -14,6 +14,7 @@ extern "C" {
 #include "serial.h"
 #include "PPP.h"
 #include <cstdint>
+#include "udp.h"
 
 // Define M_PI for Windows
 #ifndef M_PI
@@ -45,6 +46,11 @@ public:
         DUMMY_READ_TX3
     };
 
+	enum CommType {
+		SERIAL,
+		UDP
+	};
+
     // Statistics structure
     struct Statistics {
         uint32_t num_writes;
@@ -61,6 +67,7 @@ public:
     // Initialization
     int init(unsigned long baud_rate = 921600);
     int init(const char* port_name, unsigned long baud_rate = 921600);
+	int init(const char * ip, uint16_t port);
     void disconnect();
     bool is_connected() const;
 
@@ -91,6 +98,7 @@ public:
     // Direct access to hand state (for advanced users)
     abh_api_t& get_hand_state();
 
+	UdpState m_socket;
 private:
     // Serial communication
     Serial serial_;

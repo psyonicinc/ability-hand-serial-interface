@@ -17,11 +17,28 @@ AbilityHand::AbilityHand()
     memset(tx_stuffed_mem_, 0, sizeof(tx_stuffed_mem_));
     memset(rx_stuffed_mem_, 0, sizeof(rx_stuffed_mem_));
     memset(rx_unstuff_mem_, 0, sizeof(rx_unstuff_mem_));
+	m_socket = { TCS_SOCKET_INVALID, "192.168.1.100", 5000, false };
 }
 
 AbilityHand::~AbilityHand()
 {
     disconnect();
+	udp_disconnect(&m_socket);
+}
+
+int AbilityHand::init(const char * ip, uint16_t port)
+{
+	bool success = udp_connect(&m_socket);
+	if(success)
+	{
+		printf("Connected to socket successfully\n");
+		return 0;
+	}
+	else
+	{
+		printf("Failed to connect to socket\n");
+		return -1;
+	}
 }
 
 int AbilityHand::init(unsigned long baud_rate)

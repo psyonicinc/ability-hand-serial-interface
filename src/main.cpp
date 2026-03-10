@@ -17,6 +17,8 @@
 #include <chrono>
 #include <math.h>
 #include "AbilityHand.h"
+#include "udp.h"
+
 
 // Global flag for signal handling
 volatile sig_atomic_t g_running = 1;
@@ -56,7 +58,7 @@ int main()
 		printf("Initialize tinycsocket library success\n");
 	}
 
-	
+	udp_connect(&hand.m_socket);
 
 	// Set motion control mode
 	hand.set_motion_mode(AbilityHand::POSITION_MODE_TX1);

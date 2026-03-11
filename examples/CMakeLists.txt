@@ -1,0 +1,5 @@
+add_executable(example_udp example_udp.cpp)
+target_link_libraries(example_udp PRIVATE ability_hand)
+
+add_executable(example_serial example_serial.cpp)
+target_link_libraries(example_serial PRIVATE ability_hand)

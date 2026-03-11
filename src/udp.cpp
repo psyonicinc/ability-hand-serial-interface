@@ -1,3 +1,9 @@
+#ifdef _WIN32
+#define NOMINMAX
+#include <winsock2.h>
+#include <windows.h>
+#endif
+#define TINYCSOCKET_IMPLEMENTATION
 #include "udp.h"
 
 bool udp_connect(UdpState* state)

@@ -100,7 +100,7 @@ int main()
 			hand.set_position_targets(positions);
 
 			// Exchange data with hand
-			int rc = hand.exchange_motion_data(5);
+			int rc = hand.exchange_motion_data(1);
 
 			if (rc == ABH_ERROR_TIMEOUT)
 			{
@@ -118,7 +118,7 @@ int main()
 			}
 			// Check elapsed time (optional 60 second limit)
 
-			if (elapsed_sec >= 10.0f)
+			if (elapsed_sec >= 30.0f)
 			{
 				printf("Leaving\n");
 				break;

@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#include <stdlib.h>
 #include <stdint.h>
 
 /** @brief Number of motor control channels in the Ability Hand */

@@ -74,7 +74,7 @@ add_subdirectory(external/ability_hand)
 target_link_libraries(your_target PRIVATE ability_hand)
 ```
 
-In both cases, include directories and transitive dependencies (`dartt_protocol`, `serial`, `PPP`, `cobs`, and Windows socket libs) propagate automatically. If your project already defines any of those targets, `ability_hand` will detect them and skip re-adding the subdirectories.
+In both cases, include directories and transitive dependencies (`serial`, `PPP`, `cobs`, and Windows socket libs) propagate automatically. If your project already defines any of those targets, `ability_hand` will detect them and skip re-adding the subdirectories.
 
 ## Testing with Ceedling
 

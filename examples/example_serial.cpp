@@ -5,15 +5,29 @@
 #include <math.h>
 #include "AbilityHand.h"
 
+
 // Global flag for signal handling
 volatile sig_atomic_t g_running = 1;
 
-// Signal handler for Ctrl+C
+static int64_t millis_now()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()
+    ).count();
+}
+
+// Signal handler for Ctrl+C and segfaults
 void signal_handler(int signal)
 {
 	if (signal == SIGINT)
 	{
 		g_running = 0;
+	}
+	else if (signal == SIGSEGV)
+	{
+		printf("SEGFAULT caught - check pointer initialization\n");
+		fflush(stdout);
+		exit(1);
 	}
 }
 
@@ -39,13 +53,12 @@ int main()
 	float positions[NUM_CHANNELS] = {70.f, 10.f, 10.f, 10.f, 10.f, -50.f};
 
 	// Timing for statistics
-	auto start_time = std::chrono::steady_clock::now();
+	int64_t start_ms = millis_now();
 
 	// Main control loop
 	while(g_running)
 	{
-		auto current_time = std::chrono::steady_clock::now();
-		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
+		int64_t elapsed_ms = millis_now() - start_ms;
 		float elapsed_sec = elapsed_ms / 1000.0f;
 		for(int ch = 0; ch < NUM_CHANNELS; ch++)
 		{
@@ -81,9 +94,9 @@ int main()
 		}
 	}
 
+
 	// Calculate final elapsed time
-	auto end_time = std::chrono::steady_clock::now();
-	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+	int64_t elapsed_ms = millis_now() - start_ms;
 	float elapsed_sec = elapsed_ms / 1000.0f;
 
 	// Get and print statistics

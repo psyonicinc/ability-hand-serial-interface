@@ -4,9 +4,6 @@ project(ability_hand VERSION 1.0.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(NOT TARGET dartt_protocol)
-    add_subdirectory(external/dartt-protocol)
-endif()
 if(NOT TARGET serial)
     add_subdirectory(external/serial-cross-platform)
 endif()
@@ -30,8 +27,6 @@ if(WIN32)
 endif()
 
 target_link_libraries(ability_hand PUBLIC
-    dartt_protocol
-    dartt_checksum
     serial
     PPP
     cobs

@@ -26,17 +26,55 @@ This command will:
 
 ## Building
 
-### Build Instructions
+### Library only (default)
 
-1. Ensure submodules are initialized (see "Cloning the Repository" above)
-
-2. Create a build directory and run CMake:
 ```bash
-mkdir build
-cd build
-cmake ..
-cmake --build .
+cmake -S . -B build
+cmake --build build
 ```
+
+This produces `ability_hand.lib` (Windows) or `libability_hand.a` (Linux/macOS) with no executables.
+
+### With example applications
+
+```bash
+cmake -S . -B build -DBUILD_EXAMPLES=ON
+cmake --build build
+```
+
+Builds `example_udp` (UDP control loop) and `example_serial` (serial control loop) in addition to the library.
+
+---
+
+## Using as a Dependency
+
+### Option 1 — FetchContent
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    ability_hand
+    GIT_REPOSITORY https://github.com/psyonicinc/hand-serial-test.git
+    GIT_TAG        main
+)
+FetchContent_MakeAvailable(ability_hand)
+
+target_link_libraries(your_target PRIVATE ability_hand)
+```
+
+### Option 2 — git submodule
+
+```bash
+git submodule add https://github.com/psyonicinc/hand-serial-test.git external/ability_hand
+git submodule update --init --recursive
+```
+
+```cmake
+add_subdirectory(external/ability_hand)
+target_link_libraries(your_target PRIVATE ability_hand)
+```
+
+In both cases, include directories and transitive dependencies (`dartt_protocol`, `serial`, `PPP`, `cobs`, and Windows socket libs) propagate automatically. If your project already defines any of those targets, `ability_hand` will detect them and skip re-adding the subdirectories.
 
 ## Testing with Ceedling
 

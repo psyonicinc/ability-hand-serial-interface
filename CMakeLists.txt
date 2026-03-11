@@ -4,9 +4,15 @@ project(ability_hand VERSION 1.0.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(external/dartt-protocol)
-add_subdirectory(external/serial-cross-platform)
-add_subdirectory(external/byte-stuffing)
+if(NOT TARGET dartt_protocol)
+    add_subdirectory(external/dartt-protocol)
+endif()
+if(NOT TARGET serial)
+    add_subdirectory(external/serial-cross-platform)
+endif()
+if(NOT TARGET PPP)
+    add_subdirectory(external/byte-stuffing)
+endif()
 
 add_library(ability_hand STATIC
     src/AbilityHand.cpp

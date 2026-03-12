@@ -98,6 +98,9 @@ public:
     // Direct access to hand state (for advanced users)
     abh_api_t& get_hand_state();
 
+    // Hand state
+    abh_api_t hand_state;
+
 	UdpState m_socket;
 
 private:
@@ -121,9 +124,6 @@ private:
     unsigned char rx_unstuff_mem_[128];
     ppp_buffer_t rx_ppp_unstuff_alias_;
     abh_buffer_t rx_frame_;
-
-    // Hand state
-    abh_api_t hand_state_;
 
     // Statistics tracking
     Statistics stats_;

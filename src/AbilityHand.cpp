@@ -5,9 +5,9 @@
 AbilityHand::AbilityHand()
 {
     // Initialize hand state
-    memset(&hand_state_, 0, sizeof(hand_state_));
-    hand_state_.address = 0x50;  // Default address
-    hand_state_.command_header = FIXED_POSITION_CONTROL_TX1;  // Default mode
+    memset(&hand_state, 0, sizeof(hand_state));
+    hand_state.address = 0x50;  // Default address
+    hand_state.command_header = FIXED_POSITION_CONTROL_TX1;  // Default mode
 
     // Initialize statistics
     memset(&stats_, 0, sizeof(stats_));
@@ -161,40 +161,40 @@ int AbilityHand::set_motion_mode(MotionMode mode)
     switch (mode)
     {
         case POSITION_MODE_TX1:
-            hand_state_.command_header = FIXED_POSITION_CONTROL_TX1;
+            hand_state.command_header = FIXED_POSITION_CONTROL_TX1;
             break;
         case POSITION_MODE_TX2:
-            hand_state_.command_header = FIXED_POSITION_CONTROL_TX2;
+            hand_state.command_header = FIXED_POSITION_CONTROL_TX2;
             break;
         case POSITION_MODE_TX3:
-            hand_state_.command_header = FIXED_POSITION_CONTROL_TX3;
+            hand_state.command_header = FIXED_POSITION_CONTROL_TX3;
             break;
         case VELOCITY_MODE_TX1:
-            hand_state_.command_header = FIXED_VELOCITY_CONTROL_TX1;
+            hand_state.command_header = FIXED_VELOCITY_CONTROL_TX1;
             break;
         case VELOCITY_MODE_TX2:
-            hand_state_.command_header = FIXED_VELOCITY_CONTROL_TX2;
+            hand_state.command_header = FIXED_VELOCITY_CONTROL_TX2;
             break;
         case VELOCITY_MODE_TX3:
-            hand_state_.command_header = FIXED_VELOCITY_CONTROL_TX3;
+            hand_state.command_header = FIXED_VELOCITY_CONTROL_TX3;
             break;
         case TORQUE_MODE_TX1:
-            hand_state_.command_header = FIXED_TORQUE_CONTROL_TX1;
+            hand_state.command_header = FIXED_TORQUE_CONTROL_TX1;
             break;
         case TORQUE_MODE_TX2:
-            hand_state_.command_header = FIXED_TORQUE_CONTROL_TX2;
+            hand_state.command_header = FIXED_TORQUE_CONTROL_TX2;
             break;
         case TORQUE_MODE_TX3:
-            hand_state_.command_header = FIXED_TORQUE_CONTROL_TX3;
+            hand_state.command_header = FIXED_TORQUE_CONTROL_TX3;
             break;
         case VOLTAGE_MODE_TX1:
-            hand_state_.command_header = FIXED_VOLTAGE_CONTROL_TX1;
+            hand_state.command_header = FIXED_VOLTAGE_CONTROL_TX1;
             break;
         case VOLTAGE_MODE_TX2:
-            hand_state_.command_header = FIXED_VOLTAGE_CONTROL_TX2;
+            hand_state.command_header = FIXED_VOLTAGE_CONTROL_TX2;
             break;
         case VOLTAGE_MODE_TX3:
-            hand_state_.command_header = FIXED_VOLTAGE_CONTROL_TX3;
+            hand_state.command_header = FIXED_VOLTAGE_CONTROL_TX3;
             break;
         default:
             return ABH_ERROR_INVALID_HEADER;
@@ -214,13 +214,13 @@ int AbilityHand::set_short_mode(ShortMode mode)
     switch (mode)
     {
         case DUMMY_READ_TX1:
-            hand_state_.command_header = FIXED_DUMMY_TX1;
+            hand_state.command_header = FIXED_DUMMY_TX1;
             break;
         case DUMMY_READ_TX2:
-            hand_state_.command_header = FIXED_DUMMY_TX2;
+            hand_state.command_header = FIXED_DUMMY_TX2;
             break;
         case DUMMY_READ_TX3:
-            hand_state_.command_header = FIXED_DUMMY_TX3;
+            hand_state.command_header = FIXED_DUMMY_TX3;
             break;
         default:
             return ABH_ERROR_INVALID_HEADER;
@@ -237,7 +237,7 @@ int AbilityHand::exchange_motion_data(int timeout_ms)
     }
 	
     // Create movement frame
-    int rc = abh_create_movement_frame(&hand_state_, &tx_frame_);
+    int rc = abh_create_movement_frame(&hand_state, &tx_frame_);
     if (rc != ABH_SUCCESS)
     {
         return rc;
@@ -254,7 +254,7 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
     }
 
     // Create short API frame
-    int rc = abh_create_short_api_frame(&hand_state_, &tx_frame_);
+    int rc = abh_create_short_api_frame(&hand_state, &tx_frame_);
     if (rc != ABH_SUCCESS)
     {
         return rc;
@@ -303,7 +303,7 @@ int AbilityHand::send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms)
 
 	// Parse the frame
     rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state_);
+    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state);
     if (rc != ABH_SUCCESS)
     {
         stats_.num_parse_errors++;
@@ -352,7 +352,7 @@ int AbilityHand::send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms)
 
     // Parse the frame
     rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state_);
+    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state);
     if (rc != ABH_SUCCESS)
     {
         stats_.num_parse_errors++;
@@ -387,7 +387,7 @@ void AbilityHand::set_position_targets(const float positions_deg[NUM_CHANNELS])
 {
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
-        hand_state_.q_desired[ch] = (int16_t)(positions_deg[ch] * POSITION_SCALE);
+        hand_state.q_desired[ch] = (int16_t)(positions_deg[ch] * POSITION_SCALE);
     }
 }
 
@@ -395,7 +395,7 @@ void AbilityHand::set_velocity_targets(const float velocities_deg_per_sec[NUM_CH
 {
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
-        hand_state_.velocity_desired[ch] = (int16_t)(velocities_deg_per_sec[ch] * VELOCITY_TO_HAND_SCALE);
+        hand_state.velocity_desired[ch] = (int16_t)(velocities_deg_per_sec[ch] * VELOCITY_TO_HAND_SCALE);
     }
 }
 
@@ -407,7 +407,7 @@ void AbilityHand::set_torque_targets(const float torques_mNm[NUM_CHANNELS])
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
         float current_amps = torques_mNm[ch] / MOTOR_TORQUE_CONSTANT;
-        hand_state_.iq_desired[ch] = (int16_t)(current_amps / MOTOR_IQ_CONV_CONSTANT); 
+        hand_state.iq_desired[ch] = (int16_t)(current_amps / MOTOR_IQ_CONV_CONSTANT); 
     }
 }
 
@@ -423,7 +423,7 @@ void AbilityHand::set_voltage_targets(const float voltage_percent[NUM_CHANNELS])
         if (voltage_digital < -MAX_VOLTAGE_DIGITAL)
             voltage_digital = -MAX_VOLTAGE_DIGITAL;
 
-        hand_state_.vq_desired[ch] = voltage_digital;
+        hand_state.vq_desired[ch] = voltage_digital;
     }
 }
 
@@ -431,7 +431,7 @@ void AbilityHand::get_positions(float positions_deg[NUM_CHANNELS]) const
 {
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
-        positions_deg[ch] = hand_state_.q[ch] / POSITION_SCALE;
+        positions_deg[ch] = hand_state.q[ch] / POSITION_SCALE;
     }
 }
 
@@ -440,7 +440,7 @@ void AbilityHand::get_velocities(float velocities_deg_per_sec[NUM_CHANNELS]) con
     // Convert from rotor velocity (rad/s) to finger velocity (deg/s)
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
-        float rotor_velocity_rad_per_sec = hand_state_.velocity[ch] / ROTOR_VELOCITY_FROM_HAND_SCALE;
+        float rotor_velocity_rad_per_sec = hand_state.velocity[ch] / ROTOR_VELOCITY_FROM_HAND_SCALE;
 
         // Apply gear ratio (thumb rotator ch5 has different ratio)
         float gear_ratio = (ch == 5) ? GEAR_RATIO_THUMB_ROTATOR : GEAR_RATIO_FINGERS;
@@ -456,7 +456,7 @@ void AbilityHand::get_currents(float currents_amps[NUM_CHANNELS]) const
     // In production, C should be read from the hand via Bluetooth
     for (int ch = 0; ch < NUM_CHANNELS; ch++)
     {
-        currents_amps[ch] = (float)hand_state_.iq[ch] * MOTOR_IQ_CONV_CONSTANT;
+        currents_amps[ch] = (float)hand_state.iq[ch] * MOTOR_IQ_CONV_CONSTANT;
     }
 }
 
@@ -465,7 +465,7 @@ void AbilityHand::get_fsr_forces(float forces_newtons[NUM_FINGERS * NUM_FSR_PER_
     for (int i = 0; i < NUM_FINGERS * NUM_FSR_PER_FINGER; i++)
     {
         // Convert 12-bit ADC value to voltage
-        float voltage = hand_state_.fsr_raw[i] * FSR_VOLTAGE_SCALE;
+        float voltage = hand_state.fsr_raw[i] * FSR_VOLTAGE_SCALE;
 
         // Avoid division by zero
         if (voltage < 0.001f)
@@ -506,5 +506,5 @@ void AbilityHand::reset_statistics()
 
 abh_api_t& AbilityHand::get_hand_state()
 {
-    return hand_state_;
+    return hand_state;
 }

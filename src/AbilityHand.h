@@ -15,6 +15,7 @@ extern "C" {
 #include "PPP.h"
 #include <cstdint>
 #include "udp.h"
+#include <vector>
 
 // Define M_PI for Windows
 #ifndef M_PI
@@ -68,6 +69,7 @@ public:
     int init(unsigned long baud_rate = 921600);
     int init(const char* port_name, unsigned long baud_rate = 921600);
 	int init_udp(const char * ip, uint16_t port);
+	std::vector<UdpState> discover_forwarding_servers(uint32_t timeout);
     void disconnect();
     bool is_connected() const;
 

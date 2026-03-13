@@ -27,6 +27,11 @@ AbilityHand::~AbilityHand()
 	udp_disconnect(&m_socket);
 }
 
+std::vector<UdpState> discover_forwarding_servers(void)
+{
+	
+}
+
 int AbilityHand::init_udp(const char * ip, uint16_t port)
 {
 	init_buffers();

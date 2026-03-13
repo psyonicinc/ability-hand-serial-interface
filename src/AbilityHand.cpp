@@ -1,6 +1,7 @@
 #include "AbilityHand.h"
 #include <cstring>
 #include <cmath>
+#include <chrono>
 
 AbilityHand::AbilityHand()
 {
@@ -27,9 +28,86 @@ AbilityHand::~AbilityHand()
 	udp_disconnect(&m_socket);
 }
 
-std::vector<UdpState> discover_forwarding_servers(void)
+std::vector<UdpState> AbilityHand::discover_forwarding_servers(uint32_t timeout)
 {
-	
+    std::vector<UdpState> results;
+
+    TcsSocket sock = TCS_SOCKET_INVALID;
+    TcsResult res = tcs_socket_preset(&sock, TCS_PRESET_UDP_IP4);
+    if (res != TCS_SUCCESS)
+        return results;
+
+    tcs_opt_broadcast_set(sock, true);
+
+    struct TcsAddress local_addr = TCS_ADDRESS_NONE;
+    local_addr.family = TCS_AF_IP4;
+    local_addr.data.ip4.address = 0;
+    local_addr.data.ip4.port = 0;
+    tcs_bind(sock, &local_addr);
+
+    struct TcsAddress bcast_addr = TCS_ADDRESS_NONE;
+    size_t addr_count = 0;
+    res = tcs_address_resolve("255.255.255.255", TCS_AF_IP4, &bcast_addr, 1, &addr_count);
+    if (res != TCS_SUCCESS || addr_count == 0)
+    {
+        tcs_close(&sock);
+        return results;
+    }
+    bcast_addr.data.ip4.port = 5067;
+
+    size_t sent = 0;
+    tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_FLAG_NONE, &bcast_addr, &sent);
+
+    auto start = std::chrono::steady_clock::now();
+    uint8_t buf[256];
+
+    while (true)
+    {
+        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start).count();
+        if (elapsed >= (int64_t)timeout)
+		{
+            break;
+		}
+		
+        uint32_t remaining = (uint32_t)(timeout - (uint32_t)elapsed);
+        uint32_t recv_timeout = remaining < 50u ? remaining : 50u;
+        tcs_opt_receive_timeout_set(sock, (int)recv_timeout);
+
+        struct TcsAddress src_addr = TCS_ADDRESS_NONE;
+        size_t received = 0;
+        res = tcs_receive_from(sock, buf, sizeof(buf), TCS_FLAG_NONE, &src_addr, &received);
+        if (res == TCS_SUCCESS && received > 0)
+        {
+            char ip_str[64];
+            uint32_t raw = src_addr.data.ip4.address;
+            snprintf(ip_str, sizeof(ip_str), "%u.%u.%u.%u",
+                (raw >> 24) & 0xFF, (raw >> 16) & 0xFF,
+                (raw >> 8) & 0xFF, raw & 0xFF);
+
+            bool already_found = false;
+            for (const auto& s : results)
+            {
+                if (strncmp(s.ip, ip_str, sizeof(s.ip)) == 0)
+                {
+                    already_found = true;
+                    break;
+                }
+            }
+            if (!already_found)
+            {
+                UdpState state;
+                state.socket = TCS_SOCKET_INVALID;
+                snprintf(state.ip, sizeof(state.ip), "%s", ip_str);
+                state.port = 5067;
+                state.connected = false;
+                results.push_back(state);
+            }
+        }
+    }
+
+    tcs_close(&sock);
+    return results;
 }
 
 int AbilityHand::init_udp(const char * ip, uint16_t port)

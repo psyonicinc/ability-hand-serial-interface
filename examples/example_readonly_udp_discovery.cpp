@@ -48,7 +48,7 @@ int main()
 
 	// Create and initialize AbilityHand
 	AbilityHand hand;
-	std::vector<UdpEndpoint> responders = hand.discover_forwarding_servers(3000);
+	std::vector<UdpEndpoint> responders = hand.discover_forwarding_servers(100);
 	if(responders.size() == 0)
 	{
 		printf("No valid devices found, exiting due to lack of endpoints\n");

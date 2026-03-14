@@ -11,18 +11,21 @@ if(NOT TARGET PPP)
     add_subdirectory(external/byte-stuffing)
 endif()
 
-include(FetchContent)
-FetchContent_Declare(
-    tinycsocket
-    GIT_REPOSITORY https://gitlab.com/dosshell/tinycsocket.git
-    GIT_TAG v0.3  # Use the latest version tag, or master if you want the break your build system in the future
-)
-FetchContent_MakeAvailable(tinycsocket)
+# include(FetchContent)	#uncomment to regenerate tinycsocket files
+# FetchContent_Declare(
+#     tinycsocket
+#     GIT_REPOSITORY https://gitlab.com/dosshell/tinycsocket.git
+#     GIT_TAG v0.3  # Use the latest version tag, or master if you want the break your build system in the future
+# )
+# FetchContent_MakeAvailable(tinycsocket)
 
 add_library(ability_hand STATIC
     src/AbilityHand.cpp
     src/abh_communication.c
     src/udp.cpp
+	src/tinycsocket_common.c
+	src/tinycsocket_posix.c
+	src/tinycsocket_win32.c
 )
 
 target_include_directories(ability_hand PUBLIC
@@ -38,7 +41,7 @@ target_link_libraries(ability_hand PUBLIC
     serial
     PPP
     cobs
-	tinycsocket
+	# tinycsocket	#uncomment to regenerate tinycsocket files
 )
 
 option(BUILD_EXAMPLES "Build example applications" OFF)

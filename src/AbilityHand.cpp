@@ -108,6 +108,11 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
     return results;
 }
 
+int AbilityHand::init_udp(const UdpEndpoint& endpoint)
+{
+	return init_udp(endpoint.ip, endpoint.port);
+}
+
 int AbilityHand::init_udp(const char * ip, uint16_t port)
 {
 	init_buffers();

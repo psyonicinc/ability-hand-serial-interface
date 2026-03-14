@@ -37,18 +37,9 @@ int main()
 	// Register signal handlers
 	signal(SIGINT, signal_handler);
 	signal(SIGSEGV, signal_handler);
-	if (tcs_lib_init() != TCS_SUCCESS)
-	{
-		printf("Failed to initialize tinycsocket\n");
-	}
-	else
-	{
-		printf("Initialize tinycsocket library success\n");
-	}
-
 	// Create and initialize AbilityHand
 	AbilityHand hand;
-	if (hand.init_udp("10.0.4.151", 5067) != ABH_SUCCESS)
+	if (hand.init_udp("10.0.4.140", 5067) != ABH_SUCCESS)
 	{
 		printf("Failed to connect to hand via serial\n");
 		// return -1;

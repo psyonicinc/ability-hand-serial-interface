@@ -11,10 +11,10 @@ extern "C" {
 }
 #endif
 
+#include "udp.h"
 #include "serial.h"
 #include "PPP.h"
 #include <cstdint>
-#include "udp.h"
 #include <vector>
 
 // Define M_PI for Windows

@@ -19,7 +19,7 @@ AbilityHand::AbilityHand()
     memset(rx_stuffed_mem_, 0, sizeof(rx_stuffed_mem_));
     memset(rx_unstuff_mem_, 0, sizeof(rx_unstuff_mem_));
 	iface_ = IFACE_SERIAL;
-	m_socket = { TCS_SOCKET_INVALID, "192.168.1.100", 5000, false };
+	m_socket = { TCS_NULLSOCKET, "192.168.1.100", 5000, false };
 }
 
 AbilityHand::~AbilityHand()
@@ -32,34 +32,53 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
 {
     std::vector<UdpEndpoint> results;
 
-    TcsSocket sock = TCS_SOCKET_INVALID;
-    TcsResult res = tcs_socket_preset(&sock, TCS_PRESET_UDP_IP4);
+    tcs_lib_init();
+
+    TcsSocket sock = TCS_NULLSOCKET;
+    TcsReturnCode res = tcs_create(&sock, TCS_TYPE_UDP_IP4);
     if (res != TCS_SUCCESS)
-        return results;
-
-    tcs_opt_broadcast_set(sock, true);
-
-    struct TcsAddress local_addr = TCS_ADDRESS_NONE;
-    local_addr.family = TCS_AF_IP4;
-    local_addr.data.ip4.address = 0;
-    local_addr.data.ip4.port = 0;
-    tcs_bind(sock, &local_addr);
-
-    struct TcsAddress bcast_addr = TCS_ADDRESS_NONE;
-    size_t addr_count = 0;
-    res = tcs_address_resolve("255.255.255.255", TCS_AF_IP4, &bcast_addr, 1, &addr_count);
-    if (res != TCS_SUCCESS || addr_count == 0)
     {
-        tcs_close(&sock);
+        tcs_lib_free();
         return results;
     }
-    bcast_addr.data.ip4.port = 5067;
+
+    tcs_set_broadcast(sock, true);
+
+    struct TcsAddress local_addr = TCS_ADDRESS_NULL;
+    local_addr.family = TCS_AF_IP4;
+    local_addr.data.af_inet.address = 0;
+    local_addr.data.af_inet.port = 0;
+    tcs_bind_address(sock, &local_addr);
+
+    // Derive directed broadcast from first non-loopback local IPv4 address
+    uint32_t bcast_ip = TCS_ADDRESS_BROADCAST_IP4;  // fallback: 255.255.255.255
+    struct TcsInterface ifaces[16];
+    size_t iface_count = 0;
+    if (tcs_local_interfaces(ifaces, 16, &iface_count) == TCS_SUCCESS)
+    {
+        for (size_t i = 0; i < iface_count; i++)
+        {
+            if (ifaces[i].address.family != TCS_AF_IP4)
+                continue;
+            uint32_t addr = ifaces[i].address.data.af_inet.address;
+            if ((addr >> 24) == 127)  // skip loopback (127.x.x.x)
+                continue;
+            bcast_ip = (addr & 0xFFFFFF00) | 0xFF;
+            break;
+        }
+    }
+
+    struct TcsAddress bcast_addr = TCS_ADDRESS_NULL;
+    bcast_addr.family = TCS_AF_IP4;
+    bcast_addr.data.af_inet.address = bcast_ip;
+    bcast_addr.data.af_inet.port = 5067;
 
     size_t sent = 0;
-    res = tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_FLAG_NONE, &bcast_addr, &sent);
+    res = tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_NO_FLAGS, &bcast_addr, &sent);
 	if(res != TCS_SUCCESS)
 	{
-		tcs_close(&sock);
+		tcs_destroy(&sock);
+        tcs_lib_free();
 		return results;	//empty due to failed send
 	}
 
@@ -77,15 +96,15 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
 		
         uint32_t remaining = (uint32_t)(timeout - (uint32_t)elapsed);
         uint32_t recv_timeout = remaining < 50u ? remaining : 50u;
-        tcs_opt_receive_timeout_set(sock, (int)recv_timeout);
+        tcs_set_receive_timeout(sock, (int)recv_timeout);
 
-        struct TcsAddress src_addr = TCS_ADDRESS_NONE;
+        struct TcsAddress src_addr = TCS_ADDRESS_NULL;
         size_t received = 0;
-        res = tcs_receive_from(sock, buf, sizeof(buf), TCS_FLAG_NONE, &src_addr, &received);
+        res = tcs_receive_from(sock, buf, sizeof(buf), TCS_NO_FLAGS, &src_addr, &received);
         if (res == TCS_SUCCESS && received > 0)
         {
             char ip_str[64];
-            uint32_t raw = src_addr.data.ip4.address;
+            uint32_t raw = src_addr.data.af_inet.address;
             snprintf(ip_str, sizeof(ip_str), "%u.%u.%u.%u",
                 (raw >> 24) & 0xFF, (raw >> 16) & 0xFF,
                 (raw >> 8) & 0xFF, raw & 0xFF);
@@ -109,7 +128,8 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
         }
     }
 
-    tcs_close(&sock);
+    tcs_destroy(&sock);
+    tcs_lib_free();
     return results;
 }
 
@@ -363,7 +383,7 @@ int AbilityHand::send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms)
 		return ABH_ERROR_NOT_CONNECTED;
 	}
 	size_t bytes_sent = 0;
-	TcsResult res = tcs_send(m_socket.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_FLAG_NONE, &bytes_sent);
+	TcsReturnCode res = tcs_send(m_socket.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_NO_FLAGS, &bytes_sent);
 	if(res == TCS_SUCCESS && bytes_sent == tx_stuff_buf_.length)
 	{
 		stats_.num_writes++;
@@ -375,8 +395,8 @@ int AbilityHand::send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms)
 
 	struct TcsAddress src;
 	size_t bytes_received = 0;
-	tcs_opt_receive_timeout_set(m_socket.socket, timeout_ms);
-	res = tcs_receive_from(m_socket.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_FLAG_NONE, &src, &bytes_received);
+	tcs_set_receive_timeout(m_socket.socket, timeout_ms);
+	res = tcs_receive_from(m_socket.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_NO_FLAGS, &src, &bytes_received);
 	if(res == TCS_SUCCESS)
 	{
 		rx_buffer_alias_.length = bytes_received;

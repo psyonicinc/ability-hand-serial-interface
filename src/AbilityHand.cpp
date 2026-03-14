@@ -28,9 +28,9 @@ AbilityHand::~AbilityHand()
 	udp_disconnect(&m_socket);
 }
 
-std::vector<UdpState> AbilityHand::discover_forwarding_servers(uint32_t timeout)
+std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeout)
 {
-    std::vector<UdpState> results;
+    std::vector<UdpEndpoint> results;
 
     TcsSocket sock = TCS_SOCKET_INVALID;
     TcsResult res = tcs_socket_preset(&sock, TCS_PRESET_UDP_IP4);
@@ -58,7 +58,7 @@ std::vector<UdpState> AbilityHand::discover_forwarding_servers(uint32_t timeout)
     size_t sent = 0;
     tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_FLAG_NONE, &bcast_addr, &sent);
 
-    auto start = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     uint8_t buf[256];
 
     while (true)
@@ -86,9 +86,9 @@ std::vector<UdpState> AbilityHand::discover_forwarding_servers(uint32_t timeout)
                 (raw >> 8) & 0xFF, raw & 0xFF);
 
             bool already_found = false;
-            for (const auto& s : results)
+            for (const UdpEndpoint& ep : results)
             {
-                if (strncmp(s.ip, ip_str, sizeof(s.ip)) == 0)
+                if (strncmp(ep.ip, ip_str, sizeof(ep.ip)) == 0)
                 {
                     already_found = true;
                     break;
@@ -96,12 +96,10 @@ std::vector<UdpState> AbilityHand::discover_forwarding_servers(uint32_t timeout)
             }
             if (!already_found)
             {
-                UdpState state;
-                state.socket = TCS_SOCKET_INVALID;
-                snprintf(state.ip, sizeof(state.ip), "%s", ip_str);
-                state.port = 5067;
-                state.connected = false;
-                results.push_back(state);
+                UdpEndpoint ep;
+                snprintf(ep.ip, sizeof(ep.ip), "%s", ip_str);
+                ep.port = 5067;
+                results.push_back(ep);
             }
         }
     }

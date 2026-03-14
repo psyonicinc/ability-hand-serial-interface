@@ -6,6 +6,11 @@
 
 
 
+struct UdpEndpoint {
+	char ip[64];
+	uint16_t port;
+};
+
 struct UdpState {
 	TcsSocket socket;
 	char ip[64];

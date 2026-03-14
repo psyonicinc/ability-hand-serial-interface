@@ -38,6 +38,7 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
     TcsReturnCode res = tcs_create(&sock, TCS_TYPE_UDP_IP4);
     if (res != TCS_SUCCESS)
     {
+        printf("Discovery: failed to create socket (%d)\n", res);
         tcs_lib_free();
         return results;
     }
@@ -46,41 +47,54 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
 
     struct TcsAddress local_addr = TCS_ADDRESS_NULL;
     local_addr.family = TCS_AF_IP4;
-    local_addr.data.af_inet.address = 0;
+    local_addr.data.af_inet.address = 0;  // INADDR_ANY — replies come back to this socket
     local_addr.data.af_inet.port = 0;
     tcs_bind_address(sock, &local_addr);
 
-    // Derive directed broadcast from first non-loopback local IPv4 address
-    uint32_t bcast_ip = TCS_ADDRESS_BROADCAST_IP4;  // fallback: 255.255.255.255
+    // Send WHO_GOES_THERE on every non-loopback IPv4 interface's subnet broadcast
     struct TcsInterface ifaces[16];
     size_t iface_count = 0;
-    if (tcs_local_interfaces(ifaces, 16, &iface_count) == TCS_SUCCESS)
+    if (tcs_local_interfaces(ifaces, 16, &iface_count) != TCS_SUCCESS)
+        printf("Discovery: failed to enumerate interfaces\n");
+
+    int sent_count = 0;
+    for (size_t i = 0; i < iface_count; i++)
     {
-        for (size_t i = 0; i < iface_count; i++)
+        if (ifaces[i].address.family != TCS_AF_IP4)
+            continue;
+        uint32_t addr = ifaces[i].address.data.af_inet.address;
+        if ((addr >> 24) == 127)  // skip loopback
+            continue;
+
+        uint32_t bcast_ip = (addr & 0xFFFFFF00) | 0xFF;
+        printf("Discovery: trying '%s' %u.%u.%u.%u -> broadcast %u.%u.%u.%u\n",
+            ifaces[i].name,
+            (addr >> 24) & 0xFF, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF,
+            (bcast_ip >> 24) & 0xFF, (bcast_ip >> 16) & 0xFF, (bcast_ip >> 8) & 0xFF, bcast_ip & 0xFF);
+
+        struct TcsAddress bcast_addr = TCS_ADDRESS_NULL;
+        bcast_addr.family = TCS_AF_IP4;
+        bcast_addr.data.af_inet.address = bcast_ip;
+        bcast_addr.data.af_inet.port = 5067;
+
+        size_t sent = 0;
+        res = tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_NO_FLAGS, &bcast_addr, &sent);
+        if (res != TCS_SUCCESS)
         {
-            if (ifaces[i].address.family != TCS_AF_IP4)
-                continue;
-            uint32_t addr = ifaces[i].address.data.af_inet.address;
-            if ((addr >> 24) == 127)  // skip loopback (127.x.x.x)
-                continue;
-            bcast_ip = (addr & 0xFFFFFF00) | 0xFF;
-            break;
+            printf("Discovery: send failed on '%s' (%d), skipping\n", ifaces[i].name, res);
+            continue;
         }
+        printf("Discovery: sent %zu bytes on '%s'\n", sent, ifaces[i].name);
+        sent_count++;
     }
 
-    struct TcsAddress bcast_addr = TCS_ADDRESS_NULL;
-    bcast_addr.family = TCS_AF_IP4;
-    bcast_addr.data.af_inet.address = bcast_ip;
-    bcast_addr.data.af_inet.port = 5067;
-
-    size_t sent = 0;
-    res = tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_NO_FLAGS, &bcast_addr, &sent);
-	if(res != TCS_SUCCESS)
-	{
-		tcs_destroy(&sock);
+    if (sent_count == 0)
+    {
+        printf("Discovery: no interfaces succeeded\n");
+        tcs_destroy(&sock);
         tcs_lib_free();
-		return results;	//empty due to failed send
-	}
+        return results;
+    }
 
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     uint8_t buf[256];
@@ -120,6 +134,7 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
             }
             if (!already_found)
             {
+                printf("Discovery: found server at %s:5067\n", ip_str);
                 UdpEndpoint ep;
                 snprintf(ep.ip, sizeof(ep.ip), "%s", ip_str);
                 ep.port = 5067;

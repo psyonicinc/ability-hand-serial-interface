@@ -59,6 +59,7 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
     res = tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_FLAG_NONE, &bcast_addr, &sent);
 	if(res != TCS_SUCCESS)
 	{
+		tcs_close(&sock);
 		return results;	//empty due to failed send
 	}
 

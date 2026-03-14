@@ -56,7 +56,11 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
     bcast_addr.data.ip4.port = 5067;
 
     size_t sent = 0;
-    tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_FLAG_NONE, &bcast_addr, &sent);
+    res = tcs_send_to(sock, (const uint8_t*)"WHO_GOES_THERE", 14, TCS_FLAG_NONE, &bcast_addr, &sent);
+	if(res != TCS_SUCCESS)
+	{
+		return results;	//empty due to failed send
+	}
 
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     uint8_t buf[256];

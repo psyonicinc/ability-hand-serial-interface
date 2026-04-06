@@ -39,7 +39,10 @@ target_include_directories(ability_hand PUBLIC
 )
 
 if(WIN32)
+    target_compile_definitions(ability_hand PRIVATE TINYCSOCKET_USE_WIN32_IMPL)
     target_link_libraries(ability_hand PUBLIC wsock32 ws2_32 iphlpapi)
+else()
+    target_compile_definitions(ability_hand PRIVATE TINYCSOCKET_USE_POSIX_IMPL)
 endif()
 
 target_link_libraries(ability_hand PUBLIC

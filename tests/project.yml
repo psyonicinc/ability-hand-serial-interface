@@ -101,13 +101,11 @@
     - -:test/support
   :source:
     - ../src/**
-    - ../external/dartt-protocol/src/**
     - ../external/byte-stuffing/C-COBS/**
     - ../external/byte-stuffing/HDLC/**
     # serial-cross-platform doesn't have .c files, just headers
   :include:
     - ../src/**
-    - ../external/dartt-protocol/src
     - ../external/byte-stuffing/C-COBS
     - ../external/byte-stuffing/HDLC
     - ../external/serial-cross-platform

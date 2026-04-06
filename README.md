@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This codebase is dedicated for functional testing of Ability Hands, using the various UART command headers. 
+This codebase is a mixed C/C++ API wrapper for the Ability Hand Extended Communication Interface. It can be used as a statically linkable API for C++ native real-time control of an Ability Hand over serial. It includes hardware communication, using both serial ports directly and optionally interfacing with serial port forwarding servers.
 
 ## Initial Setup
 

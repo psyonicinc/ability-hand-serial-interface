@@ -91,7 +91,7 @@ int main()
 
 			if (rc == ABH_ERROR_TIMEOUT)
 			{
-				printf("Timeout %d\n", elapsed_ms);
+				printf("Timeout %lld\n", elapsed_ms);
 			}
 			else if (rc != ABH_SUCCESS)
 			{

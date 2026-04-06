@@ -1,5 +1,5 @@
-#include <cstdio>
 #include <iostream>
+#include <iomanip>
 #include <csignal>
 #include <chrono>
 #include <math.h>
@@ -26,8 +26,7 @@ void signal_handler(int signal)
 	}
 	else if (signal == SIGSEGV)
 	{
-		printf("SEGFAULT caught - check pointer initialization\n");
-		fflush(stdout);
+		std::cout << "SEGFAULT caught - check pointer initialization\n" << std::flush;
 		exit(1);
 	}
 }
@@ -39,23 +38,23 @@ int main()
 	signal(SIGSEGV, signal_handler);
 	if (tcs_lib_init() != TCS_SUCCESS)
 	{
-		printf("Failed to initialize tinycsocket\n");
+		std::cout << "Failed to initialize tinycsocket\n";
 	}
 	else
 	{
-		printf("Initialize tinycsocket library success\n");
+		std::cout << "Initialize tinycsocket library success\n";
 	}
 
 	// Create and initialize AbilityHand
 	AbilityHand hand;
 	if (hand.init_udp("10.0.4.151", 5067) != ABH_SUCCESS)
 	{
-		printf("Failed to connect to hand via serial\n");
+		std::cout << "Failed to connect to hand via serial\n";
 		// return -1;
 	}
 	else
 	{
-		printf("Connected to Ability Hand successfully\n");
+		std::cout << "Connected to Ability Hand successfully\n";
 	}
 
 	// Set motion control mode
@@ -91,23 +90,23 @@ int main()
 
 			if (rc == ABH_ERROR_TIMEOUT)
 			{
-				printf("Timeout %lld\n", elapsed_ms);
+				std::cout << "Timeout " << elapsed_ms << "\n";
 			}
 			else if (rc != ABH_SUCCESS)
 			{
-				printf("Error: %d\n", rc);
+				std::cout << "Error: " << rc << "\n";
 			}
 			else
 			{
 				float q[NUM_CHANNELS] = {};
 				hand.get_positions(q);
-				// printf("%0.2X\n", hand.get_hand_state().hot_cold_bitmask);
+				// std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << (int)hand.get_hand_state().hot_cold_bitmask << "\n";
 			}
 			// Check elapsed time (optional 60 second limit)
 
 			if (elapsed_sec >= 10.0f)
 			{
-				printf("Leaving\n");
+				std::cout << "Leaving\n";
 				break;
 			}
 		}
@@ -120,17 +119,18 @@ int main()
 	// Get and print statistics
 	auto stats = hand.get_statistics();
 
-	printf("\n\n=== Exit Statistics ===\n");
+	std::cout << std::fixed << std::setprecision(2);
+	std::cout << "\n\n=== Exit Statistics ===\n";
 	if (stats.num_writes > 0 && elapsed_sec > 0.0f)
 	{
 		float avg_frequency = (float)stats.num_successful_reads / elapsed_sec;
-		printf("Rate: %.2f Hz\n", avg_frequency);
-		printf("Duration: %.2f sec\n", elapsed_sec);
+		std::cout << "Rate: " << avg_frequency << " Hz\n";
+		std::cout << "Duration: " << elapsed_sec << " sec\n";
 	}
-	printf("Writes: %u\n", stats.num_writes);
-	printf("Reads: %u\n", stats.num_successful_reads);
-	printf("Packet Loss: %.2f%%\n", stats.packet_loss_percent);
-	printf("=======================\n");
+	std::cout << "Writes: " << stats.num_writes << "\n";
+	std::cout << "Reads: " << stats.num_successful_reads << "\n";
+	std::cout << "Packet Loss: " << stats.packet_loss_percent << "%\n";
+	std::cout << "=======================\n";
 
 	hand.disconnect();
 	return 0;

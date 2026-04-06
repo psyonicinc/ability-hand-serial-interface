@@ -19,13 +19,18 @@ endif()
 # )
 # FetchContent_MakeAvailable(tinycsocket)
 
+if(WIN32)
+    set(TINYCSOCKET_PLATFORM_SRC src/tinycsocket_win32.c)
+else()
+    set(TINYCSOCKET_PLATFORM_SRC src/tinycsocket_posix.c)
+endif()
+
 add_library(ability_hand STATIC
     src/AbilityHand.cpp
     src/abh_communication.c
     src/udp.cpp
-	src/tinycsocket_common.c
-	src/tinycsocket_posix.c
-	src/tinycsocket_win32.c
+    src/tinycsocket_common.c
+    ${TINYCSOCKET_PLATFORM_SRC}
 )
 
 target_include_directories(ability_hand PUBLIC

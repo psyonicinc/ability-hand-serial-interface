@@ -4,6 +4,10 @@
  *
  * This file defines the low-level communication protocol for the Psyonic Ability Hand,
  * including frame construction, parsing, and data structures for control and feedback.
+ * 
+ * These functions assume message arrives under framing: i.e. outgoing data should be 
+ * byte stuffed, etc. in a second operation, and incoming data should be byte unstuffed, etc. 
+ * before passing to this parsing core.
  */
 
 #ifndef ABH_COMMUNICATION_H
@@ -15,6 +19,7 @@ extern "C" {
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 /** @brief Number of motor control channels in the Ability Hand */
 #define NUM_CHANNELS 6
@@ -75,8 +80,39 @@ enum
 	ABH_ERROR_TIMEOUT = -7,              /**< Communication timeout occurred */
 	ABH_ERROR_CONNECTION_FAILED = -8,    /**< Failed to establish serial connection */
 	ABH_ERROR_ALREADY_CONNECTED = -9,    /**< Connection already exists */
-	ABH_ERROR_WRITE_FAILED = -10         /**< Failed to write data to serial port */
+	ABH_ERROR_WRITE_FAILED = -10,         /**< Failed to write data to serial port */
+	ABH_ERROR_INVALID_REGISTER_REPLY = 11
 };
+
+/** @brief Success code for register interface */
+#define	ABH_REGISTER_SUCCESS 			0x4E11FEA4
+/** @brief Fail code for register interface */
+#define	ABH_REGISTER_FAIL 				0xFA17FFFF
+/** @brief Register write response length */
+#define ABH_REGISTER_WRITE_REPLY_LEN 	4
+/** @brief Register read response length */
+#define ABH_REGISTER_READ_REPLY_LEN		9
+
+/**
+ * @brief Read reply type abstraction
+ */
+enum 
+{
+	ABH_REGISTER_WRIE_REPLY,	//we have identified the reply frame as a write reply based on structure/size/value
+	ABH_REGISTER_READ_REPLY,
+	ABH_REGISTER_INVALID_REPLY	//the parsed message is invalid. We captured something other than a register read/write reply
+};
+
+/**
+ * @brief Register read reply abstraction
+ * Container to store parsed register read reply and write reply message contents
+ */
+typedef struct abh_register_reply_t
+{
+	bool request_valid;	//true if the message is signed as valid, false otherwise
+	int reply_type;	//write, read, or invalid
+	uint32_t register_value;	//unmodified if write reply, register read value if read reply
+}abh_register_reply_t;
 
 /**
  * @brief Main API data structure for Ability Hand communication.
@@ -123,6 +159,17 @@ typedef struct abh_buffer_t
 uint8_t abh_get_checksum(uint8_t * arr, int size);
 
 /**
+ * @brief Verify checksum validity and then pop it off the tail of the message
+ * 
+ * This calls abh_get_checksum and on match cuts it off the tail of the message (using .len) 
+ * and returns true on match. If there is a mismatch, the message is not mutated and it returns false.
+ *
+ *  @param msg The message to check
+ * 	@return True if checksum matches. Modifies msg in this case. False if the message does not match 
+ */
+bool abh_pop_checksum(abh_buffer_t * msg);
+
+/**
  * @brief Creates a register write command frame.
  *
  * Constructs a complete serial frame to write a 32-bit value to a register
@@ -163,7 +210,7 @@ int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_b
  * @return ABH_SUCCESS on success, ABH_ERROR_CHECKSUM_MISMATCH if validation fails, or other error codes.
  * @note This function is currently a stub and returns 0 immediately.
  */
-int abh_parse_read_register_reply(abh_buffer_t * frame, abh_api_t * abh, uint32_t * reply_word);
+int abh_parse_register_reply(abh_buffer_t * frame, abh_api_t * abh, abh_register_reply_t * msg);
 
 /**
  * @brief Creates a short API command frame.

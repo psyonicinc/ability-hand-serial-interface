@@ -1,6 +1,7 @@
 #include "abh_communication.h"
 
-
+/*Helper for checking abh buffers. DRY*/
+int check_msg(abh_buffer_t* msg);
 
 /*
 Generic 2's complement hex checksum calculation.
@@ -14,6 +15,33 @@ uint8_t abh_get_checksum(uint8_t * arr, int size)
 		checksum += (int8_t)arr[i];
 	return -checksum;
 }
+
+/*
+Locally scoped helper function
+*/
+bool abh_pop_checksum(abh_buffer_t * msg)
+{
+	if(check_msg(msg) != ABH_SUCCESS)
+	{
+		return false;
+	}
+	if(msg->len <= sizeof(uint8_t))//reply must be at least 2 bytes for a 1-byte checksum signature to be valid
+	{
+		return false;
+	}
+	uint16_t chksum = abh_get_checksum(msg->buf, msg->len - sizeof(uint8_t));
+    unsigned char m_chksum = msg->buf[(msg->len - sizeof(uint8_t))];
+	if(chksum == m_chksum)
+	{
+		msg->len = msg->len - sizeof(uint8_t);	//remove checksum
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 
 
 /*
@@ -38,10 +66,12 @@ void abh_unpack_8bit_into_12bit(uint8_t* arr, uint16_t* vals, int valsize)
  */
 int append_uint32(uint32_t value, abh_buffer_t * frame)
 {
-	if(frame == NULL)
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
 	{
-		return ABH_ERROR_INVALID_ARGUMENT;
+		return chkrc;
 	}
+	
 	if(frame->size < frame->len + sizeof(uint32_t))
 	{
 		return ABH_ERROR_BUFFER_OVERRUN;
@@ -58,9 +88,10 @@ int append_uint32(uint32_t value, abh_buffer_t * frame)
  */
 int append_uint16(uint16_t value, abh_buffer_t * frame)
 {
-	if(frame == NULL)
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
 	{
-		return ABH_ERROR_INVALID_ARGUMENT;
+		return chkrc;
 	}
 	if(frame->size < frame->len + sizeof(uint16_t))
 	{
@@ -76,7 +107,12 @@ int append_uint16(uint16_t value, abh_buffer_t * frame)
 */
 int abh_create_write_register_frame(abh_api_t * abh, uint32_t reg_address, uint32_t value, abh_buffer_t * frame)
 {
-	if(abh == NULL || frame == NULL || frame->size == 0)
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
+	{
+		return chkrc;
+	}
+	if(abh == NULL)
 	{
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
@@ -100,7 +136,13 @@ Read register request frame
 */
 int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_buffer_t * frame)
 {
-	if(abh == NULL || frame == NULL || frame->size == 0)
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
+	{
+		return chkrc;
+	}
+
+	if(abh == NULL)
 	{
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
@@ -120,18 +162,96 @@ int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_b
 
 /*
 Loads pass-by-reference result of read reply frame with the valid result, or returns with an error
-*/
-int abh_parse_read_register_reply(abh_buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
-{
-	return 0;
-}
 
-/*
-Parse the response issued from a write register request
+TODO: DEPRECATE THIS INTERFACE. REPLACE WITH DARTT.
+DO NOT MAP TO MODBUS.
+DO MAP DARTT TO MODBUS.
+
+Register replies have the following possible responses:
+If a write request was generated:
+	1. 0x4E11FEA4 (success)
+	2. 0xFA17FFFF (fail)
+If a read request was generated:
+	1. [0x4E11FEA4][value][checksum]
 */
-int abh_parse_write_register_reply(abh_buffer_t * frame, abh_api_t * abh, uint32_t * reply_word)
+int abh_parse_register_reply(abh_buffer_t * frame, abh_api_t * abh, abh_register_reply_t * msg)
 {
-	return 0;
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
+	{
+		return chkrc;
+	}
+	if(abh == NULL || msg == NULL)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	//TODO: add more input validity checks. Reduce repeated patterns for this with helper functions
+
+	/*Obtain the header value. Code out if the number of bytes recieved is smaller than a valid header*/
+	uint32_t header = 0;
+	size_t msg_pos = 0;
+	if(frame->len >= sizeof(uint32_t))
+	{
+		for(size_t i = 0; i < sizeof(uint32_t); i++)
+		{
+			header |= ((uint32_t)frame->buf[msg_pos]) << (i*8);
+			msg_pos++;
+		}
+	}
+	else	//invalid due to small size, code out
+	{
+		msg->request_valid = false;
+		msg->reply_type = ABH_REGISTER_INVALID_REPLY;
+		return ABH_ERROR_INVALID_REGISTER_REPLY;
+	}
+
+	/*parse header into request_valid variable*/
+	if(header == ABH_REGISTER_SUCCESS)
+	{
+		msg->request_valid = true;
+	}
+	else if (header == ABH_REGISTER_FAIL)
+	{
+		msg->request_valid = false;
+	}
+	else	//invalid due to invalid header, code out
+	{
+		msg->request_valid = false;
+		msg->reply_type = ABH_REGISTER_INVALID_REPLY;
+		return ABH_ERROR_INVALID_REGISTER_REPLY;	
+	}
+
+
+	if(frame->len == ABH_REGISTER_WRITE_REPLY_LEN)	
+	{
+		msg->reply_type = ABH_REGISTER_WRIE_REPLY;	//if we're here, it's a valid header of size 4. So we know it's a write reply and we know that we should return after loading that.
+		return ABH_SUCCESS;
+	}
+	else if (frame->len != ABH_REGISTER_READ_REPLY_LEN)		//if we're here, the length must be equal to read reply length or it's invalid
+	{
+		msg->request_valid = false;
+		msg->reply_type = ABH_REGISTER_INVALID_REPLY;
+		return ABH_ERROR_INVALID_REGISTER_REPLY;
+	}
+
+	bool valid = abh_pop_checksum(frame);
+	if(valid == false)
+	{
+		msg->request_valid = false;
+		msg->reply_type = ABH_REGISTER_INVALID_REPLY;
+		return ABH_ERROR_INVALID_REGISTER_REPLY;
+	}
+
+	//by making it here, we know the length precisely matches 
+	msg->request_valid = true;
+	msg->reply_type = ABH_REGISTER_READ_REPLY;
+	msg->register_value = 0;
+	for(size_t i = 0; i < sizeof(uint32_t); i++)
+	{
+		msg->register_value |= ((uint32_t)frame->buf[msg_pos]) << (i*8);
+		msg_pos++;
+	}
+	return ABH_SUCCESS;
 }
 
 /*
@@ -139,7 +259,12 @@ int abh_parse_write_register_reply(abh_buffer_t * frame, abh_api_t * abh, uint32
  */
 int abh_create_short_api_frame(abh_api_t * abh, abh_buffer_t * frame)
 {
-	if(abh == NULL || frame == NULL || frame->size == 0)
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
+	{
+		return chkrc;
+	}
+	if(abh == NULL)
 	{
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
@@ -163,7 +288,13 @@ int abh_create_short_api_frame(abh_api_t * abh, abh_buffer_t * frame)
  */
 int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame)
 {
-	if(abh == NULL || frame == NULL || frame->size == 0)
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
+	{
+		return chkrc;
+	}
+
+	if(abh == NULL)
 	{
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
@@ -225,7 +356,13 @@ Blocking function to parse ability hand frame response/reply
  */
 int ahb_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 {
-	if(frame == NULL || abh == NULL || frame->len == 0)
+	int chkrc = check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
+	{
+		return chkrc;
+	}
+
+	if(abh == NULL || frame->len == 0)
 	{
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
@@ -284,3 +421,26 @@ int ahb_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 	return ABH_SUCCESS;
 }
 
+/*
+	Helper for checking abh buffers
+*/
+int check_msg(abh_buffer_t* msg)
+{
+	if(msg == NULL)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	else if(msg->buf == NULL)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	else if(msg->len > msg->size)
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+	else if(msg->size == 0)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	return ABH_SUCCESS;
+}

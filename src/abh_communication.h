@@ -161,13 +161,12 @@ uint8_t abh_get_checksum(uint8_t * arr, int size);
 /**
  * @brief Verify checksum validity and then pop it off the tail of the message
  * 
- * This calls abh_get_checksum and on match cuts it off the tail of the message (using .len) 
- * and returns true on match. If there is a mismatch, the message is not mutated and it returns false.
+ * This calls abh_get_checksum and returns true on match. If there is a mismatch, it returns false.
  *
- *  @param msg The message to check
- * 	@return True if checksum matches. Modifies msg in this case. False if the message does not match 
+ *  @param msg The message to check. Not mutated by this function.
+ * 	@return True if checksum matches. False if the message does not match.
  */
-bool abh_pop_checksum(abh_buffer_t * msg);
+bool abh_verify_checksum(abh_buffer_t * msg);
 
 /**
  * @brief Creates a register write command frame.

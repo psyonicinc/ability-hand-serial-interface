@@ -17,9 +17,9 @@ uint8_t abh_get_checksum(uint8_t * arr, int size)
 }
 
 /*
-Locally scoped helper function
+	Helper to verify checksum validity
 */
-bool abh_pop_checksum(abh_buffer_t * msg)
+bool abh_verify_checksum(abh_buffer_t * msg)
 {
 	if(check_msg(msg) != ABH_SUCCESS)
 	{
@@ -33,7 +33,7 @@ bool abh_pop_checksum(abh_buffer_t * msg)
     unsigned char m_chksum = msg->buf[(msg->len - sizeof(uint8_t))];
 	if(chksum == m_chksum)
 	{
-		msg->len = msg->len - sizeof(uint8_t);	//remove checksum
+		// msg->len = msg->len - sizeof(uint8_t);	//remove checksum
 		return true;
 	}
 	else
@@ -234,12 +234,12 @@ int abh_parse_register_reply(abh_buffer_t * frame, abh_api_t * abh, abh_register
 		return ABH_ERROR_INVALID_REGISTER_REPLY;
 	}
 
-	bool valid = abh_pop_checksum(frame);
+	bool valid = abh_verify_checksum(frame);
 	if(valid == false)
 	{
 		msg->request_valid = false;
 		msg->reply_type = ABH_REGISTER_INVALID_REPLY;
-		return ABH_ERROR_INVALID_REGISTER_REPLY;
+		return ABH_ERROR_CHECKSUM_MISMATCH;
 	}
 
 	//by making it here, we know the length precisely matches 
@@ -367,11 +367,12 @@ int ahb_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
 	
-	uint8_t chksum = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
-	if(chksum != 0)
+	bool checksum_valid = abh_verify_checksum(frame);
+	if(checksum_valid == false)
 	{
 		return ABH_ERROR_CHECKSUM_MISMATCH;
 	}
+	
 	int bidx = 0;
 	abh->format_header = frame->buf[bidx++];
 	uint8_t reply_mode = (abh->format_header & 0x0F) + 1;

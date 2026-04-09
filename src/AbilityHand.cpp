@@ -25,7 +25,10 @@ AbilityHand::AbilityHand()
 AbilityHand::~AbilityHand()
 {
     disconnect();
-	udp_disconnect(&m_socket);
+	if (iface_ == IFACE_UDP)
+	{
+		udp_disconnect(&m_socket);
+	}
 }
 
 std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeout)

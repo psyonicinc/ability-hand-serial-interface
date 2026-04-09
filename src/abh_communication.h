@@ -205,7 +205,6 @@ int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_b
  * register read command. Validates the checksum before parsing.
  *
  * @param frame Pointer to the buffer containing the received reply frame.
- * @param abh Pointer to the API state structure.
  * @param reply_word Pointer to store the extracted 32-bit register value.
  * @return ABH_SUCCESS on success, ABH_ERROR_CHECKSUM_MISMATCH if validation fails, or other error codes.
  * @note This function is currently a stub and returns 0 immediately.

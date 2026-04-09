@@ -81,7 +81,8 @@ enum
 	ABH_ERROR_CONNECTION_FAILED = -8,    /**< Failed to establish serial connection */
 	ABH_ERROR_ALREADY_CONNECTED = -9,    /**< Connection already exists */
 	ABH_ERROR_WRITE_FAILED = -10,         /**< Failed to write data to serial port */
-	ABH_ERROR_INVALID_REGISTER_REPLY = 11
+	ABH_ERROR_INVALID_REGISTER_REPLY = -11,
+	ABH_ERROR_REPLY_LEN_INVALID = -12
 };
 
 /** @brief Success code for register interface */

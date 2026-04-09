@@ -1,3 +1,4 @@
+#include <string.h>
 #include "abh_communication.h"
 #include "unity.h"
 
@@ -272,9 +273,18 @@ void test_movement_reply_basic_fuzzing(void)
 	rc = abh_parse_movement_reply(&rx, &abh);
 	TEST_ASSERT_EQUAL(ABH_ERROR_CHECKSUM_MISMATCH, rc);
 
-	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = sizeof(rxmem)};
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 72};
 	rc = abh_parse_movement_reply(&rx, &abh);
-	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);	//succeeds from matching checksum
+	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);	//succeeds from matching checksum and correct length
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 71};
+	rc = abh_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//to short
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 73};
+	rc = abh_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//too long
 
 	rx.len = 0;
 	for(size_t i = 0; i < 11; i++)
@@ -288,6 +298,80 @@ void test_movement_reply_basic_fuzzing(void)
 	
 }
 
+void test_sizes_valid_messages(void)
+{
+	abh_api_t abh = {};
+	unsigned char rxmem[128] = {};
+	abh_buffer_t rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 0};		
+	int rc = 0;
+
+	{	//reply mode 1
+		rx.len = 72;
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);	//succeeds from matching checksum and correct length
+
+		rx.len = 71;
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//to short
+
+		rx.len = 73;
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//too long
+	}
+	{	//reply mode 2
+		memset(rx.buf, 0, rx.size);
+		rx.buf[0] = 1;
+		rx.len = 71;
+		rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+		TEST_ASSERT_EQUAL(72, rx.len);
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);	//succeeds from matching checksum and correct length
+
+		memset(rx.buf, 0, rx.size);
+		rx.buf[0] = 1;
+		rx.len = 70;
+		rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+		TEST_ASSERT_EQUAL(71, rx.len);
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//succeeds from matching checksum and correct length
+
+
+		memset(rx.buf, 0, rx.size);
+		rx.buf[0] = 1;
+		rx.len = 72;
+		rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+		TEST_ASSERT_EQUAL(73, rx.len);
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//succeeds from matching checksum and correct length
+	}
+	{	//reply mode 3
+		memset(rx.buf, 0, rx.size);
+		rx.buf[0] = 2;
+		rx.len = 38;
+		rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+		TEST_ASSERT_EQUAL(39, rx.len);
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);	//succeeds from matching checksum and correct length
+
+		memset(rx.buf, 0, rx.size);
+		rx.buf[0] = 2;
+		rx.len = 37;
+		rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+		TEST_ASSERT_EQUAL(38, rx.len);
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//succeeds from matching checksum and correct length
+
+
+		memset(rx.buf, 0, rx.size);
+		rx.buf[0] = 2;
+		rx.len = 39;
+		rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+		TEST_ASSERT_EQUAL(40, rx.len);
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	//succeeds from matching checksum and correct length
+	}
+}
+
 void test_movement_reply_invalid_reply_mode(void)
 {
 	abh_api_t abh = {};
@@ -297,8 +381,55 @@ void test_movement_reply_invalid_reply_mode(void)
 	rx.buf[rx.len++] = 0x3;		//invalid
 	rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
 	int rc = abh_parse_movement_reply(&rx, &abh);
-	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_REPLY_MODE, rc);
-	
+	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_REPLY_MODE, rc);	
 }
 
+/**
+ * Helper function to append a uint16_t to the end of a abh_buffer_t, little endian. no checks
+ */
+void helper_append_uint16(uint16_t value, abh_buffer_t * frame)
+{
+	frame->buf[frame->len++] = (unsigned char)(value & 0x00FF);
+	frame->buf[frame->len++] = (unsigned char)((value & 0xFF00) >> 8);
+}
+
+typedef struct helper_motor_value_pair_t
+{
+	int16_t q;
+	int16_t iq_or_dq;
+}helper_motor_value_pair_t;
+
+void test_movement_reply_test_build_message(void)
+{
+	abh_api_t abh = {};
+	abh.address = 0x50;
+	unsigned char rxmem[128] = {};
+	abh_buffer_t rx = {.buf = rxmem, .size = sizeof(rxmem), .len = 0};
+	rx.buf[rx.len++] = 0x0;		//reply mode 1
+	int rc = 0;
+	
+	helper_motor_value_pair_t mvals[NUM_CHANNELS] = {{1, 2}, {3, 4}, {5, 6}, {7, 8}, {-9, -10}, {-11, -12}};
+	size_t i = 0;
+	for(i = 0; i < sizeof(mvals)/sizeof(helper_motor_value_pair_t) - 1; i++)
+	{
+		helper_append_uint16((uint16_t)mvals[i].q, &rx);
+		helper_append_uint16((uint16_t)mvals[i].iq_or_dq, &rx);
+		rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+		rc = abh_parse_movement_reply(&rx, &abh);
+		TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	
+		rx.len--;	//remove checksum
+	}
+	helper_append_uint16((uint16_t)mvals[i].q, &rx);
+	helper_append_uint16((uint16_t)mvals[i].iq_or_dq, &rx);
+	unsigned char fsr_mem[45] = {};
+	for(i = 0; i < sizeof(fsr_mem); i++)
+	{
+		rx.buf[rx.len++] = fsr_mem[i];
+	}
+	rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+	rc = abh_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	
+
+
+}
 

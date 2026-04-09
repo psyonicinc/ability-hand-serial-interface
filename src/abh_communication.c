@@ -1,5 +1,12 @@
 #include "abh_communication.h"
 
+/*length of the mandatory motor section in reply*/
+static const size_t nbytes_motor_section = 24;		//pre-check length
+/*length of the optional fsr section for reply 1 and 2 types*/
+static const size_t nbytes_packed_fsr_data = 45;
+/*length of the optional motor section for reply 3 types*/
+static const size_t nbytes_tail_motor_section = 12;
+
 /*Helper for checking abh buffers. DRY*/
 int check_msg(abh_buffer_t* msg);
 
@@ -381,6 +388,12 @@ int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 		return ABH_ERROR_INVALID_REPLY_MODE;	//placeholder, enumerate explicit error codes later
 	}
 
+	//pre-check overrun before diving into the frame parser
+	if(frame->len < bidx + nbytes_motor_section)	
+	{
+		return ABH_ERROR_REPLY_LEN_INVALID;
+	}
+	//extract motor section values
 	for(int ch = 0; ch < NUM_CHANNELS; ch++)
 	{
 		//extract first value
@@ -402,13 +415,22 @@ int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 			abh->velocity[ch] = (int16_t)tmpl;
 		}
 	}
+	//grab fsr data
 	if(reply_mode == 1 || reply_mode == 2)
 	{
+		if(frame->len < bidx + nbytes_packed_fsr_data)
+		{
+			return ABH_ERROR_REPLY_LEN_INVALID;
+		}
 		abh_unpack_8bit_into_12bit(&frame->buf[bidx], abh->fsr_raw, NUM_FINGERS*NUM_FSR_PER_FINGER);
-		bidx += 45;	//total bytes
+		bidx += nbytes_packed_fsr_data;	//total bytes
 	}
 	else if (reply_mode == 3)
 	{
+		if(frame->len < bidx + nbytes_tail_motor_section)	//pre-check overrun before pulling out velocity in type 3
+		{
+			return ABH_ERROR_REPLY_LEN_INVALID;
+		}
 		for(int ch = 0; ch < NUM_CHANNELS; ch++)
 		{
 			uint16_t tmpl = 0;
@@ -417,8 +439,15 @@ int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 			abh->velocity[ch] = (int16_t)tmpl;
 		}
 	}
+	if(frame->len < bidx + 1)	
+	{
+		return ABH_ERROR_REPLY_LEN_INVALID;
+	}
 	abh->hot_cold_bitmask = frame->buf[bidx++];
-
+	if(frame->len != bidx + 1)	//checksum is at position bidx, len should be bidx+1
+	{
+		return ABH_ERROR_REPLY_LEN_INVALID;
+	}
 	return ABH_SUCCESS;
 }
 

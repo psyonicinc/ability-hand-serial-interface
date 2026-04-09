@@ -2,16 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Active Example",
-            "type": "cppvsdbg",
+            "name": "Debug Active Test",
+            "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/examples/Debug/${fileBasenameNoExtension}.exe",
+            "program": "${workspaceFolder}/tests/build/test/out/${fileBasenameNoExtension}/${fileBasenameNoExtension}.out",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "console": "integratedTerminal",
-            "preLaunchTask": "cmake-build"
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "ceedling-build-test"
         }
     ]
 }

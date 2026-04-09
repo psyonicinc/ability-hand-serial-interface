@@ -99,9 +99,9 @@ enum
  */
 enum 
 {
+	ABH_REGISTER_INVALID_REPLY,	//the parsed message is invalid. We captured something other than a register read/write reply
 	ABH_REGISTER_WRITE_REPLY,	//we have identified the reply frame as a write reply based on structure/size/value
-	ABH_REGISTER_READ_REPLY,
-	ABH_REGISTER_INVALID_REPLY	//the parsed message is invalid. We captured something other than a register read/write reply
+	ABH_REGISTER_READ_REPLY
 };
 
 /**

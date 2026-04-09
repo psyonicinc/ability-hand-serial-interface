@@ -424,7 +424,7 @@ void test_movement_reply_test_build_message(void)
 	rx.buf[rx.len++] = 0x0;		//reply mode 1
 	int rc = 0;
 	
-	helper_motor_value_pair_t mvals[NUM_CHANNELS] = {{1, 2}, {3, 4}, {5, 6}, {7, 8}, {-9, -10}, {-11, -12}};
+	helper_motor_value_pair_t mvals[NUM_CHANNELS] = {{1, 2}, {3, 4}, {5, 6}, {7, 8}, {9, 10}, {11, 12}};
 	size_t i = 0;
 	for(i = 0; i < sizeof(mvals)/sizeof(helper_motor_value_pair_t) - 1; i++)
 	{
@@ -442,10 +442,19 @@ void test_movement_reply_test_build_message(void)
 	{
 		rx.buf[rx.len++] = fsr_mem[i];
 	}
+	rx.buf[rx.len++] = 0xFE;
 	rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
 	rc = abh_parse_movement_reply(&rx, &abh);
-	TEST_ASSERT_EQUAL(ABH_ERROR_REPLY_LEN_INVALID, rc);	
+	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);	
 
+	TEST_ASSERT_EQUAL(0xFE, abh.hot_cold_bitmask);	
+
+	int16_t val = 1;
+	for(i = 0; i < NUM_CHANNELS; i++)
+	{
+		TEST_ASSERT_EQUAL(val++, abh.q[i]);	
+		TEST_ASSERT_EQUAL(val++, abh.iq[i]);	
+	}
 
 }
 

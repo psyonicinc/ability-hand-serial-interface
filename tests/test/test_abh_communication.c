@@ -242,3 +242,41 @@ void test_abh_create_movement_frame_buffer_overrun(void)
 	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
 }
 
+void test_movement_reply_basic_fuzzing(void)
+{
+	int rc = ahb_parse_movement_reply(NULL, NULL);
+	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
+
+	abh_api_t abh = {};
+	unsigned char rxmem[128] = {};
+	rc = ahb_parse_movement_reply(NULL, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
+
+	abh_buffer_t rx = {.buf = NULL, .size = 10, .len = 5};
+	rc = ahb_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = 0, .len = 5};
+	rc = ahb_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = sizeof(rxmem) + 1};
+	rc = ahb_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 0};
+	rc = ahb_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 1};
+	rc = ahb_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_CHECKSUM_MISMATCH, rc);
+
+	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = sizeof(rxmem)};
+	rc = ahb_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
+}
+
+
+
+

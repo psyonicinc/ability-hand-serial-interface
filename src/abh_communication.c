@@ -181,14 +181,14 @@ If a write request was generated:
 If a read request was generated:
 	1. [0x4E11FEA4][value][checksum]
 */
-int abh_parse_register_reply(abh_buffer_t * frame, abh_api_t * abh, abh_register_reply_t * msg)
+int abh_parse_register_reply(abh_buffer_t * frame, abh_register_reply_t * msg)
 {
 	int chkrc = check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
 	}
-	if(abh == NULL || msg == NULL)
+	if(msg == NULL)
 	{
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
@@ -231,7 +231,7 @@ int abh_parse_register_reply(abh_buffer_t * frame, abh_api_t * abh, abh_register
 
 	if(frame->len == ABH_REGISTER_WRITE_REPLY_LEN)	
 	{
-		msg->reply_type = ABH_REGISTER_WRIE_REPLY;	//if we're here, it's a valid header of size 4. So we know it's a write reply and we know that we should return after loading that.
+		msg->reply_type = ABH_REGISTER_WRITE_REPLY;	//if we're here, it's a valid header of size 4. So we know it's a write reply and we know that we should return after loading that.
 		return ABH_SUCCESS;
 	}
 	else if (frame->len != ABH_REGISTER_READ_REPLY_LEN)		//if we're here, the length must be equal to read reply length or it's invalid

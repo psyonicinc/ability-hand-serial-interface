@@ -99,7 +99,7 @@ enum
  */
 enum 
 {
-	ABH_REGISTER_WRIE_REPLY,	//we have identified the reply frame as a write reply based on structure/size/value
+	ABH_REGISTER_WRITE_REPLY,	//we have identified the reply frame as a write reply based on structure/size/value
 	ABH_REGISTER_READ_REPLY,
 	ABH_REGISTER_INVALID_REPLY	//the parsed message is invalid. We captured something other than a register read/write reply
 };
@@ -210,7 +210,7 @@ int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_b
  * @return ABH_SUCCESS on success, ABH_ERROR_CHECKSUM_MISMATCH if validation fails, or other error codes.
  * @note This function is currently a stub and returns 0 immediately.
  */
-int abh_parse_register_reply(abh_buffer_t * frame, abh_api_t * abh, abh_register_reply_t * msg);
+int abh_parse_register_reply(abh_buffer_t * frame, abh_register_reply_t * msg);
 
 /**
  * @brief Creates a short API command frame.

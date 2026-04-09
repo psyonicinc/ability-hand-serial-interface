@@ -294,7 +294,10 @@ void test_movement_reply_invalid_reply_mode(void)
 	abh.address = 0x50;
 	unsigned char rxmem[128] = {};
 	abh_buffer_t rx = {.buf = rxmem, .size = sizeof(rxmem), .len = 0};
-	rx.buf[rx.len++] = 0x0;
+	rx.buf[rx.len++] = 0x3;		//invalid
+	rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+	int rc = abh_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_REPLY_MODE, rc);
 	
 }
 

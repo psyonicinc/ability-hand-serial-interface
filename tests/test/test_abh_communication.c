@@ -244,39 +244,58 @@ void test_abh_create_movement_frame_buffer_overrun(void)
 
 void test_movement_reply_basic_fuzzing(void)
 {
-	int rc = ahb_parse_movement_reply(NULL, NULL);
+	int rc = abh_parse_movement_reply(NULL, NULL);
 	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
 
 	abh_api_t abh = {};
 	unsigned char rxmem[128] = {};
-	rc = ahb_parse_movement_reply(NULL, &abh);
+	rc = abh_parse_movement_reply(NULL, &abh);
 	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
 
 	abh_buffer_t rx = {.buf = NULL, .size = 10, .len = 5};
-	rc = ahb_parse_movement_reply(&rx, &abh);
+	rc = abh_parse_movement_reply(&rx, &abh);
 	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
 
 	rx = (abh_buffer_t){.buf = rxmem, .size = 0, .len = 5};
-	rc = ahb_parse_movement_reply(&rx, &abh);
+	rc = abh_parse_movement_reply(&rx, &abh);
 	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
 
 	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = sizeof(rxmem) + 1};
-	rc = ahb_parse_movement_reply(&rx, &abh);
+	rc = abh_parse_movement_reply(&rx, &abh);
 	TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
 
 	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 0};
-	rc = ahb_parse_movement_reply(&rx, &abh);
+	rc = abh_parse_movement_reply(&rx, &abh);
 	TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
 
 	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = 1};
-	rc = ahb_parse_movement_reply(&rx, &abh);
+	rc = abh_parse_movement_reply(&rx, &abh);
 	TEST_ASSERT_EQUAL(ABH_ERROR_CHECKSUM_MISMATCH, rc);
 
 	rx = (abh_buffer_t){.buf = rxmem, .size = sizeof(rxmem), .len = sizeof(rxmem)};
-	rc = ahb_parse_movement_reply(&rx, &abh);
-	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
+	rc = abh_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);	//succeeds from matching checksum
+
+	rx.len = 0;
+	for(size_t i = 0; i < 11; i++)
+	{
+		rx.buf[rx.len++] = i+1;
+	}
+	rx.buf[rx.len] = abh_get_checksum(rx.buf, rx.len) - 1;
+	rx.len++;
+	rc = abh_parse_movement_reply(&rx, &abh);
+	TEST_ASSERT_EQUAL(ABH_ERROR_CHECKSUM_MISMATCH, rc);	//succeeds from matching checksum
+	
 }
 
-
+void test_movement_reply_invalid_reply_mode(void)
+{
+	abh_api_t abh = {};
+	abh.address = 0x50;
+	unsigned char rxmem[128] = {};
+	abh_buffer_t rx = {.buf = rxmem, .size = sizeof(rxmem), .len = 0};
+	rx.buf[rx.len++] = 0x0;
+	
+}
 
 

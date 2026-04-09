@@ -429,7 +429,7 @@ int AbilityHand::send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms)
 
 	// Parse the frame
     rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state);
+    int rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
     if (rc != ABH_SUCCESS)
     {
         stats_.num_parse_errors++;
@@ -478,7 +478,7 @@ int AbilityHand::send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms)
 
     // Parse the frame
     rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    int rc = ahb_parse_movement_reply(&rx_frame_, &hand_state);
+    int rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
     if (rc != ABH_SUCCESS)
     {
         stats_.num_parse_errors++;

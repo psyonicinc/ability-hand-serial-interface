@@ -354,7 +354,7 @@ int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame)
 /*
 Blocking function to parse ability hand frame response/reply
  */
-int ahb_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
+int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 {
 	int chkrc = check_msg(frame);
 	if(chkrc != ABH_SUCCESS)

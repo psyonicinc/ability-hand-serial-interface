@@ -248,7 +248,7 @@ int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame);
  * @return ABH_SUCCESS on success, or an error code (ABH_ERROR_CHECKSUM_MISMATCH,
  *         ABH_ERROR_INVALID_REPLY_MODE, ABH_ERROR_BUFFER_OVERRUN) on failure.
  */
-int ahb_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh);
+int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh);
 
 #ifdef __cplusplus
 }

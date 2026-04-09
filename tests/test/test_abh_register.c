@@ -185,3 +185,21 @@ void test_register_valid_read_reply(void)
 	TEST_ASSERT_EQUAL(ABH_REGISTER_READ_REPLY, msg.reply_type);
 	TEST_ASSERT_EQUAL(0x12345678, msg.register_value);
 }
+
+void test_register_invalid_read_reply(void)
+{
+	abh_register_reply_t msg = {.register_value = 0xABCDEF77, .reply_type = ABH_REGISTER_INVALID_REPLY, .request_valid = false};
+	unsigned char rx_mem[32] = {};
+	abh_buffer_t rx = {.buf = rx_mem, .size = sizeof(rx_mem), .len = 0};
+	int rc = 0;
+
+	helper_append_uint32(ABH_REGISTER_SUCCESS, &rx);
+	helper_append_uint32(0x12345678, &rx);
+	rx.len--;
+	rx.buf[rx.len++] = abh_get_checksum(rx.buf, rx.len);
+	rc = abh_parse_register_reply(&rx, &msg);
+	TEST_ASSERT_NOT_EQUAL(ABH_SUCCESS, rc);
+	TEST_ASSERT_EQUAL(false, msg.request_valid);
+	TEST_ASSERT_EQUAL(ABH_REGISTER_INVALID_REPLY, msg.reply_type);
+	TEST_ASSERT_EQUAL(0xABCDEF77, msg.register_value);
+}

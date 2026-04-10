@@ -52,6 +52,25 @@ public:
 		IFACE_UDP
 	};
 
+	enum Finger : int {
+		INDEX = 0,
+		MIDDLE = 1,
+		RING = 2, 
+		PINKY = 3,
+		THUMB_FLEXOR = 4,
+		THUMB_ROTATOR = 5
+	};
+
+	enum UpsamplingChannel : uint32_t {
+		UPSAMPLING_INDEX         = (1 << INDEX),
+		UPSAMPLING_MIDDLE        = (1 << MIDDLE),
+		UPSAMPLING_RING          = (1 << RING),
+		UPSAMPLING_PINKY         = (1 << PINKY),
+		UPSAMPLING_THUMB_FLEXOR  = (1 << THUMB_FLEXOR),
+		UPSAMPLING_THUMB_ROTATOR = (1 << THUMB_ROTATOR),
+		UPSAMPLING_ALL           = 0x3F
+	};
+
     // Statistics structure
     struct Statistics {
         uint32_t num_writes;
@@ -80,6 +99,8 @@ public:
 
 	int read_register(uint32_t addr, abh_register_reply_t& reply, int timeout_ms = 50);
 	int write_register(uint32_t addr, uint32_t value, abh_register_reply_t& reply, int timeout_ms = 50);
+	int enable_upsampling(UpsamplingChannel mask = UPSAMPLING_ALL);
+	int disable_upsampling(UpsamplingChannel mask = UPSAMPLING_ALL);
 
     // Core communication
     int exchange_motion_data(int timeout_ms = 5);

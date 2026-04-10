@@ -14,12 +14,14 @@ int check_msg(abh_buffer_t* msg);
 Generic 2's complement hex checksum calculation.
 Used in the psyonic API
 */
-uint8_t abh_get_checksum(uint8_t * arr, int size)
+uint8_t abh_get_checksum(uint8_t * arr, size_t size)
 {
 
 	int8_t checksum = 0;
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
+	{
 		checksum += (int8_t)arr[i];
+	}
 	return -checksum;
 }
 
@@ -379,7 +381,7 @@ int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 		return ABH_ERROR_CHECKSUM_MISMATCH;
 	}
 	
-	int bidx = 0;
+	size_t bidx = 0;
 	abh->format_header = frame->buf[bidx++];
 	uint8_t reply_mode = (abh->format_header & 0x0F) + 1;
 	if(reply_mode < 1 || reply_mode > 3)

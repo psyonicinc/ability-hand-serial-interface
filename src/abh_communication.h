@@ -157,7 +157,7 @@ typedef struct abh_buffer_t
  * @param size Number of bytes to include in the checksum calculation.
  * @return The calculated 8-bit checksum value.
  */
-uint8_t abh_get_checksum(uint8_t * arr, int size);
+uint8_t abh_get_checksum(uint8_t * arr, size_t size);
 
 /**
  * @brief Verify checksum validity and then pop it off the tail of the message

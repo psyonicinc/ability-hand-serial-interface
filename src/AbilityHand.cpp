@@ -358,6 +358,32 @@ int AbilityHand::set_short_mode(ShortMode mode)
     return ABH_SUCCESS;
 }
 
+int AbilityHand::enable_upsampling(UpsamplingChannel mask)
+{
+    abh_register_reply_t reply = {};
+    int rc = read_register(63, reply);
+    if (rc != ABH_SUCCESS || reply.request_valid == false)
+    { 
+		return rc;
+	}
+
+    uint32_t val = reply.register_value | mask;
+    return write_register(63, val, reply);
+}
+
+int AbilityHand::disable_upsampling(UpsamplingChannel mask)
+{
+    abh_register_reply_t reply = {};
+    int rc = read_register(63, reply);
+    if (rc != ABH_SUCCESS || reply.request_valid == false)
+    {
+		return rc;
+	}
+
+    uint32_t val = reply.register_value & ~mask;
+    return write_register(63, val, reply);
+}
+
 int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_reply_t& reply, int timeout_ms)
 {
     if (!is_connected())

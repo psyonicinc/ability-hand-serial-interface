@@ -14,6 +14,7 @@ extern "C" {
 #include "udp.h"
 #include "serial.h"
 #include "PPP.h"
+#include "cobs.h"
 #include <cstdint>
 #include <vector>
 
@@ -50,6 +51,11 @@ public:
 	enum CommType {
 		IFACE_SERIAL,
 		IFACE_UDP
+	};
+
+	enum StuffingMode {
+		STUFFING_PPP,
+		STUFFING_COBS
 	};
 
 	enum Finger : int {
@@ -133,8 +139,9 @@ public:
 private:
     // Serial communication
     Serial serial_;
-	
+
 	CommType iface_;
+	StuffingMode stuffing_mode_;
 
     // TX buffers (unstuffed → stuffed)
     unsigned char tx_mem_[128];
@@ -143,13 +150,16 @@ private:
 
     unsigned char tx_stuffed_mem_[258];  // 128*2 + 2 delimiters
     ppp_buffer_t tx_stuff_buf_;
+    cobs_buf_t tx_cobs_buf_;             // aliases tx_stuffed_mem_ for COBS encode
 
     // RX buffers (stuffed → unstuffed)
     unsigned char rx_stuffed_mem_[256];
     ppp_buffer_t rx_buffer_alias_;
+    cobs_buf_t rx_cobs_encoded_;         // aliases rx_stuffed_mem_ for COBS decode
 
     unsigned char rx_unstuff_mem_[128];
     ppp_buffer_t rx_ppp_unstuff_alias_;
+    cobs_buf_t rx_cobs_decoded_;         // aliases rx_unstuff_mem_ for COBS decode
     abh_buffer_t rx_frame_;
 
     // Statistics tracking
@@ -173,6 +183,7 @@ private:
     // Helper methods
     void init_buffers();
     void abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
+    void abh_to_cobs(abh_buffer_t* in, cobs_buf_t* out);
 
 	int raw_exchange_serial(int timeout_ms);	// transport only: stuff tx_frame_, send, receive, unstuff into rx_frame_
 	int raw_exchange_udp(int timeout_ms);

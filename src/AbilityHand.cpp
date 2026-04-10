@@ -358,38 +358,9 @@ int AbilityHand::set_short_mode(ShortMode mode)
     return ABH_SUCCESS;
 }
 
-int AbilityHand::exchange_register_frame(int timeout_ms)
-{
-    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
-    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
-
-    int bytes_written = serial_.write(tx_stuff_buf_.buf, (int)tx_stuff_buf_.length);
-    if (bytes_written != (int)tx_stuff_buf_.length)
-	{
-		return ABH_ERROR_WRITE_FAILED;
-	}
-
-    int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
-    if (rxlen == -2)
-    {
-		return ABH_ERROR_TIMEOUT;
-	}
-    if (rxlen <= 0)
-    {
-		return ABH_ERROR_INVALID_ARGUMENT;
-	}
-
-    rx_buffer_alias_.length = rxlen;
-    PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
-    rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    return ABH_SUCCESS;
-}
-
 int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_reply_t& reply, int timeout_ms)
 {
     if (!is_connected())
-        return ABH_ERROR_NOT_CONNECTED;
-    if (iface_ != IFACE_SERIAL)
         return ABH_ERROR_NOT_CONNECTED;
 
     tx_frame_.len = 0;
@@ -397,44 +368,37 @@ int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_repl
     if (rc != ABH_SUCCESS)
         return rc;
 
-    rc = exchange_register_frame(timeout_ms);
+    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
+    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+    rc = raw_exchange(timeout_ms);
     if (rc != ABH_SUCCESS)
-    {
-		return rc;
-	}
+        return rc;
 
     reply.register_value = 0;
-	reply.reply_type = ABH_REGISTER_INVALID_REPLY;
-	reply.request_valid = false;
+    reply.reply_type = ABH_REGISTER_INVALID_REPLY;
+    reply.request_valid = false;
     return abh_parse_register_reply(&rx_frame_, &reply);
 }
 
 int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int timeout_ms)
 {
     if (!is_connected())
-    {
-		return ABH_ERROR_NOT_CONNECTED;
-	}
-    if (iface_ != IFACE_SERIAL)
-	{
-		return ABH_ERROR_NOT_CONNECTED;
-	}
+        return ABH_ERROR_NOT_CONNECTED;
 
     tx_frame_.len = 0;
     int rc = abh_create_read_register_frame(&hand_state, addr, &tx_frame_);
     if (rc != ABH_SUCCESS)
-    {
-		return rc;
-	}
-    rc = exchange_register_frame(timeout_ms);
+        return rc;
+
+    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
+    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+    rc = raw_exchange(timeout_ms);
     if (rc != ABH_SUCCESS)
-    {
-		return rc;
-	}
+        return rc;
 
     reply.register_value = 0;
-	reply.reply_type = ABH_REGISTER_INVALID_REPLY;
-	reply.request_valid = false;
+    reply.reply_type = ABH_REGISTER_INVALID_REPLY;
+    reply.request_valid = false;
     return abh_parse_register_reply(&rx_frame_, &reply);
 }
 
@@ -471,118 +435,91 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
 
     return send_and_receive(&tx_frame_, timeout_ms);
 }
-int AbilityHand::send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms)
+int AbilityHand::raw_exchange_serial(int timeout_ms)
 {
-	// Stuff the frame
-    abh_to_ppp(tx_frame, &tx_unstuff_alias_);
-	PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
-	if (!m_socket.connected)
-	{
-		return ABH_ERROR_NOT_CONNECTED;
-	}
-	size_t bytes_sent = 0;
-	TcsReturnCode res = tcs_send(m_socket.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_NO_FLAGS, &bytes_sent);
-	if(res == TCS_SUCCESS && bytes_sent == tx_stuff_buf_.length)
-	{
-		stats_.num_writes++;
-	}
-	else
-	{
-		return ABH_ERROR_WRITE_FAILED;
-	}
-
-	struct TcsAddress src;
-	size_t bytes_received = 0;
-	tcs_set_receive_timeout(m_socket.socket, timeout_ms);
-	res = tcs_receive_from(m_socket.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_NO_FLAGS, &src, &bytes_received);
-	if(res == TCS_SUCCESS)
-	{
-		rx_buffer_alias_.length = bytes_received;
-	}
-	else
-	{
-		rx_buffer_alias_.length = 0;
-		return ABH_ERROR_TIMEOUT;
-	}
-	if(bytes_received == 0)
-	{
-		return ABH_ERROR_INVALID_ARGUMENT;
-	}
-	PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
-
-	// Parse the frame
-    rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    int rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-    if (rc != ABH_SUCCESS)
-    {
-        stats_.num_parse_errors++;
-        return rc;
-    }
-
-    // Success
-    stats_.num_successful_reads++;
-    return ABH_SUCCESS;
-}
-
-int AbilityHand::send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms)
-{
-	    // Stuff the frame
-    abh_to_ppp(tx_frame, &tx_unstuff_alias_);
-	PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
-
-
-    // Send the stuffed frame
-    int bytes_written = serial_.write(tx_stuff_buf_.buf, static_cast<int>(tx_stuff_buf_.length));
+    int bytes_written = serial_.write(tx_stuff_buf_.buf, (int)(tx_stuff_buf_.length));
     stats_.num_writes++;
-
     if (bytes_written != (int)tx_stuff_buf_.length)
-    {
         return ABH_ERROR_WRITE_FAILED;
-    }
 
-    // Read response
     int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
-
     if (rxlen == -2)
     {
-        // Timeout
         stats_.num_timeouts++;
         return ABH_ERROR_TIMEOUT;
     }
-
     if (rxlen <= 0)
-    {
         return ABH_ERROR_INVALID_ARGUMENT;
-    }
 
-    // Unstuff the frame
     rx_buffer_alias_.length = rxlen;
     PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
-
-    // Parse the frame
     rx_frame_.len = rx_ppp_unstuff_alias_.length;
-    int rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-    if (rc != ABH_SUCCESS)
-    {
-        stats_.num_parse_errors++;
-        return rc;
-    }
-
-    // Success
-    stats_.num_successful_reads++;
     return ABH_SUCCESS;
+}
+
+int AbilityHand::raw_exchange_udp(int timeout_ms)
+{
+    if (!m_socket.connected)
+        return ABH_ERROR_NOT_CONNECTED;
+
+    size_t bytes_sent = 0;
+    TcsReturnCode res = tcs_send(m_socket.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_NO_FLAGS, &bytes_sent);
+    if (res == TCS_SUCCESS && bytes_sent == tx_stuff_buf_.length)
+        stats_.num_writes++;
+    else
+        return ABH_ERROR_WRITE_FAILED;
+
+    struct TcsAddress src;
+    size_t bytes_received = 0;
+    tcs_set_receive_timeout(m_socket.socket, timeout_ms);
+    res = tcs_receive_from(m_socket.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_NO_FLAGS, &src, &bytes_received);
+    if (res != TCS_SUCCESS)
+    {
+        rx_buffer_alias_.length = 0;
+        return ABH_ERROR_TIMEOUT;
+    }
+    if (bytes_received == 0)
+        return ABH_ERROR_INVALID_ARGUMENT;
+
+    rx_buffer_alias_.length = bytes_received;
+    PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
+    rx_frame_.len = rx_ppp_unstuff_alias_.length;
+    return ABH_SUCCESS;
+}
+
+int AbilityHand::raw_exchange(int timeout_ms)
+{
+    if (iface_ == IFACE_SERIAL)
+	{
+        return raw_exchange_serial(timeout_ms);
+	}
+    else
+	{
+        return raw_exchange_udp(timeout_ms);
+	}
 }
 
 int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
 {
-	if(iface_ == IFACE_SERIAL)
-	{
-		return send_recieve_serial(tx_frame, timeout_ms);
-	}
-	else
-	{
-		return send_recieve_udp(tx_frame, timeout_ms);
-	}
+    abh_to_ppp(tx_frame, &tx_unstuff_alias_);
+    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+
+    int rc = raw_exchange(timeout_ms);
+    if (rc != ABH_SUCCESS)
+    {
+        stats_.num_parse_errors++;
+        return rc;
+    }
+
+    rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
+    if (rc != ABH_SUCCESS)
+    {
+        stats_.num_parse_errors++;
+        return rc;
+    }
+
+    stats_.num_successful_reads++;
+    return ABH_SUCCESS;
 }
 
 void AbilityHand::abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out)
@@ -655,7 +592,7 @@ void AbilityHand::get_velocities(float velocities_deg_per_sec[NUM_CHANNELS]) con
         float gear_ratio = (ch == 5) ? GEAR_RATIO_THUMB_ROTATOR : GEAR_RATIO_FINGERS;
 
         // Convert rad/s to deg/s and account for gear ratio
-        velocities_deg_per_sec[ch] = rotor_velocity_rad_per_sec * (180.0f / static_cast<float>(M_PI)) / gear_ratio;
+        velocities_deg_per_sec[ch] = rotor_velocity_rad_per_sec * (180.0f / (float)(M_PI)) / gear_ratio;
     }
 }
 

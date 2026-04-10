@@ -154,9 +154,9 @@ private:
     int send_and_receive(abh_buffer_t* tx_frame, int timeout_ms);
     void abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
 
-	int send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms);	//internal helper for serial comms only
-	int send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms);
-	int exchange_register_frame(int timeout_ms);	// stuff tx_frame_, send, receive, unstuff into rx_frame_
+	int raw_exchange_serial(int timeout_ms);	// transport only: stuff tx_frame_, send, receive, unstuff into rx_frame_
+	int raw_exchange_udp(int timeout_ms);
+	int raw_exchange(int timeout_ms);			// dispatches on iface_
 };
 
 #endif // ABILITY_HAND_H

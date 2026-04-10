@@ -358,6 +358,86 @@ int AbilityHand::set_short_mode(ShortMode mode)
     return ABH_SUCCESS;
 }
 
+int AbilityHand::exchange_register_frame(int timeout_ms)
+{
+    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
+    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+
+    int bytes_written = serial_.write(tx_stuff_buf_.buf, (int)tx_stuff_buf_.length);
+    if (bytes_written != (int)tx_stuff_buf_.length)
+	{
+		return ABH_ERROR_WRITE_FAILED;
+	}
+
+    int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
+    if (rxlen == -2)
+    {
+		return ABH_ERROR_TIMEOUT;
+	}
+    if (rxlen <= 0)
+    {
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+
+    rx_buffer_alias_.length = rxlen;
+    PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
+    rx_frame_.len = rx_ppp_unstuff_alias_.length;
+    return ABH_SUCCESS;
+}
+
+int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_reply_t& reply, int timeout_ms)
+{
+    if (!is_connected())
+        return ABH_ERROR_NOT_CONNECTED;
+    if (iface_ != IFACE_SERIAL)
+        return ABH_ERROR_NOT_CONNECTED;
+
+    tx_frame_.len = 0;
+    int rc = abh_create_write_register_frame(&hand_state, addr, value, &tx_frame_);
+    if (rc != ABH_SUCCESS)
+        return rc;
+
+    rc = exchange_register_frame(timeout_ms);
+    if (rc != ABH_SUCCESS)
+    {
+		return rc;
+	}
+
+    reply.register_value = 0;
+	reply.reply_type = ABH_REGISTER_INVALID_REPLY;
+	reply.request_valid = false;
+    return abh_parse_register_reply(&rx_frame_, &reply);
+}
+
+int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int timeout_ms)
+{
+    if (!is_connected())
+    {
+		return ABH_ERROR_NOT_CONNECTED;
+	}
+    if (iface_ != IFACE_SERIAL)
+	{
+		return ABH_ERROR_NOT_CONNECTED;
+	}
+
+    tx_frame_.len = 0;
+    int rc = abh_create_read_register_frame(&hand_state, addr, &tx_frame_);
+    if (rc != ABH_SUCCESS)
+    {
+		return rc;
+	}
+    rc = exchange_register_frame(timeout_ms);
+    if (rc != ABH_SUCCESS)
+    {
+		return rc;
+	}
+
+    reply.register_value = 0;
+	reply.reply_type = ABH_REGISTER_INVALID_REPLY;
+	reply.request_valid = false;
+    return abh_parse_register_reply(&rx_frame_, &reply);
+}
+
 int AbilityHand::exchange_motion_data(int timeout_ms)
 {
     if (!is_connected())

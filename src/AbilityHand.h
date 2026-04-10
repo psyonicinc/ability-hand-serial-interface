@@ -78,6 +78,9 @@ public:
     int set_motion_mode(MotionMode mode);
     int set_short_mode(ShortMode mode);
 
+	int read_register(uint32_t addr, abh_register_reply_t& reply, int timeout_ms = 50);
+	int write_register(uint32_t addr, uint32_t value, abh_register_reply_t& reply, int timeout_ms = 50);
+
     // Core communication
     int exchange_motion_data(int timeout_ms = 5);
     int exchange_short_msg(int timeout_ms = 5);
@@ -153,6 +156,7 @@ private:
 
 	int send_recieve_serial(abh_buffer_t * tx_frame, int timeout_ms);	//internal helper for serial comms only
 	int send_recieve_udp(abh_buffer_t * tx_frame, int timeout_ms);
+	int exchange_register_frame(int timeout_ms);	// stuff tx_frame_, send, receive, unstuff into rx_frame_
 };
 
 #endif // ABILITY_HAND_H

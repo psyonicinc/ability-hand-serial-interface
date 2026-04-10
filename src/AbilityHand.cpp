@@ -368,8 +368,6 @@ int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_repl
     if (rc != ABH_SUCCESS)
         return rc;
 
-    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
-    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
     rc = raw_exchange(timeout_ms);
     if (rc != ABH_SUCCESS)
         return rc;
@@ -390,8 +388,6 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
     if (rc != ABH_SUCCESS)
         return rc;
 
-    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
-    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
     rc = raw_exchange(timeout_ms);
     if (rc != ABH_SUCCESS)
         return rc;
@@ -405,38 +401,61 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
 int AbilityHand::exchange_motion_data(int timeout_ms)
 {
     if (!is_connected())
-    {
         return ABH_ERROR_NOT_CONNECTED;
-    }
-	
-    // Create movement frame
+
     int rc = abh_create_movement_frame(&hand_state, &tx_frame_);
     if (rc != ABH_SUCCESS)
+        return rc;
+
+    rc = raw_exchange(timeout_ms);
+    if (rc != ABH_SUCCESS)
     {
+        stats_.num_parse_errors++;
         return rc;
     }
 
-    return send_and_receive(&tx_frame_, timeout_ms);
+    rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
+    if (rc != ABH_SUCCESS)
+    {
+        stats_.num_parse_errors++;
+        return rc;
+    }
+
+    stats_.num_successful_reads++;
+    return ABH_SUCCESS;
 }
 
 int AbilityHand::exchange_short_msg(int timeout_ms)
 {
     if (!is_connected())
-    {
         return ABH_ERROR_NOT_CONNECTED;
-    }
 
-    // Create short API frame
     int rc = abh_create_short_api_frame(&hand_state, &tx_frame_);
     if (rc != ABH_SUCCESS)
+        return rc;
+
+    rc = raw_exchange(timeout_ms);
+    if (rc != ABH_SUCCESS)
     {
+        stats_.num_parse_errors++;
         return rc;
     }
 
-    return send_and_receive(&tx_frame_, timeout_ms);
+    rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
+    if (rc != ABH_SUCCESS)
+    {
+        stats_.num_parse_errors++;
+        return rc;
+    }
+
+    stats_.num_successful_reads++;
+    return ABH_SUCCESS;
 }
 int AbilityHand::raw_exchange_serial(int timeout_ms)
 {
+    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
+    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+
     int bytes_written = serial_.write(tx_stuff_buf_.buf, (int)(tx_stuff_buf_.length));
     stats_.num_writes++;
     if (bytes_written != (int)tx_stuff_buf_.length)
@@ -459,6 +478,9 @@ int AbilityHand::raw_exchange_serial(int timeout_ms)
 
 int AbilityHand::raw_exchange_udp(int timeout_ms)
 {
+    abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
+    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+
     if (!m_socket.connected)
         return ABH_ERROR_NOT_CONNECTED;
 
@@ -499,28 +521,6 @@ int AbilityHand::raw_exchange(int timeout_ms)
 	}
 }
 
-int AbilityHand::send_and_receive(abh_buffer_t* tx_frame, int timeout_ms)
-{
-    abh_to_ppp(tx_frame, &tx_unstuff_alias_);
-    PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
-
-    int rc = raw_exchange(timeout_ms);
-    if (rc != ABH_SUCCESS)
-    {
-        stats_.num_parse_errors++;
-        return rc;
-    }
-
-    rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-    if (rc != ABH_SUCCESS)
-    {
-        stats_.num_parse_errors++;
-        return rc;
-    }
-
-    stats_.num_successful_reads++;
-    return ABH_SUCCESS;
-}
 
 void AbilityHand::abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out)
 {

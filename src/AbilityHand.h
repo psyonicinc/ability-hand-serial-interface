@@ -151,7 +151,6 @@ private:
 
     // Helper methods
     void init_buffers();
-    int send_and_receive(abh_buffer_t* tx_frame, int timeout_ms);
     void abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
 
 	int raw_exchange_serial(int timeout_ms);	// transport only: stuff tx_frame_, send, receive, unstuff into rx_frame_

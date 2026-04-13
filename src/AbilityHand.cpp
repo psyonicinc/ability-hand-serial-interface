@@ -736,15 +736,18 @@ int AbilityHand::command_handling(const std::string& payload,
 	// 	responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
 	// }
 	int nresponses = 0;
-	int nattempts = 0;
+	int nerrors = 0;
 	while(1)
 	{
-		nattempts++;
 		// printf("attempts: %d\n", nattempts);
 		rc = read_and_unstuff(timeout_ms);
 		if(rc == ABH_ERROR_TIMEOUT)
 		{
 			return rc;
+		}
+		else if(rc != ABH_SUCCESS)
+		{
+			nerrors++;
 		}
 		if(pop_crc16(&rx_frame_) == true)
 		{
@@ -754,12 +757,16 @@ int AbilityHand::command_handling(const std::string& payload,
 		else
 		{
 			// printf("Mismatch, len = %d\n", rx_frame_.len);
+			nerrors++;
 		}
 		if(nresponses == nresponses_expected)
 		{
 			return ABH_SUCCESS;
 		}
-		
+		if(nerrors > nresponses_expected)
+		{
+			return ABH_ERROR_CONNECTION_FAILED;	//placeholder error
+		}
 	}
 	return ABH_SUCCESS;
 }

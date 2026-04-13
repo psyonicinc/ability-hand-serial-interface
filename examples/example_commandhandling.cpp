@@ -16,7 +16,7 @@ int main(void)
 	}
 	hand.set_motion_mode(AbilityHand::POSITION_MODE_TX1);
 	std::vector<std::string> responses;
-	int rc = hand.command_handling("Rc", responses, 1);
+	int rc = hand.command_handling("R#", responses, 7, 2000);
 	if(rc == 0)
 	{
 		for(size_t i = 0; i < responses.size(); i++)

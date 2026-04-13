@@ -657,6 +657,33 @@ int AbilityHand::raw_exchange(int timeout_ms)
 	return read_and_unstuff(timeout_ms);
 }
 
+bool pop_crc16(abh_buffer_t * msg)
+{
+	if(abh_check_msg(msg) != ABH_SUCCESS)
+	{
+		return false;
+	}
+	if(msg->len <= sizeof(uint16_t))//reply must be at least 3 bytes for a 2-byte crc signature to be valid
+	{
+		return false;
+	}
+	uint16_t crc = abh_crc16(msg->buf, msg->len - sizeof(uint16_t));
+    uint16_t m_crc = 0;
+    unsigned char * pchecksum = msg->buf + (msg->len - sizeof(uint16_t));
+    m_crc |= (uint16_t)pchecksum[0];
+    m_crc |= ((uint16_t)pchecksum[1]) << 8;
+
+	if(m_crc == crc)
+	{
+		msg->len = msg->len - sizeof(uint16_t);	//remove checksum
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 int AbilityHand::command_handling(const std::string& payload,
 								   std::vector<std::string>& responses,
 								   int nresponses_expected, int timeout_ms)
@@ -686,27 +713,53 @@ int AbilityHand::command_handling(const std::string& payload,
 	}
 
 	responses.clear();
-	for (int i = 0; i < nresponses_expected; i++)
+	// for (int i = 0; i < nresponses_expected; i++)
+	// {
+	// 	rc = read_and_unstuff(timeout_ms);
+	// 	if (rc != ABH_SUCCESS)
+	// 	{
+	// 		return rc;
+	// 	}
+
+	// 	if (rx_frame_.len < crc_len + 1)
+	// 	{
+	// 		return ABH_ERROR_REPLY_LEN_INVALID;
+	// 	}
+
+	// 	size_t rx_payload_len = rx_frame_.len - crc_len;
+	// 	uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
+	// 	uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
+	// 							((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
+	// 	if (expected_crc != received_crc)
+	// 		return ABH_ERROR_CHECKSUM_MISMATCH;
+
+	// 	responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
+	// }
+	int nresponses = 0;
+	int nattempts = 0;
+	while(1)
 	{
+		nattempts++;
+		// printf("attempts: %d\n", nattempts);
 		rc = read_and_unstuff(timeout_ms);
-		if (rc != ABH_SUCCESS)
+		if(rc == ABH_ERROR_TIMEOUT)
 		{
 			return rc;
 		}
-
-		if (rx_frame_.len < crc_len + 1)
+		if(pop_crc16(&rx_frame_) == true)
 		{
-			return ABH_ERROR_REPLY_LEN_INVALID;
+			responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_frame_.len);
+			nresponses++;
 		}
-
-		size_t rx_payload_len = rx_frame_.len - crc_len;
-		uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
-		uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
-								((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
-		if (expected_crc != received_crc)
-			return ABH_ERROR_CHECKSUM_MISMATCH;
-
-		responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
+		else
+		{
+			// printf("Mismatch, len = %d\n", rx_frame_.len);
+		}
+		if(nresponses == nresponses_expected)
+		{
+			return ABH_SUCCESS;
+		}
+		
 	}
 	return ABH_SUCCESS;
 }

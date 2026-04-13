@@ -250,6 +250,13 @@ int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame);
  */
 int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh);
 
+/**
+ * @brief Helper function to check an abh_buffer_t
+ * @param msg pointer to input buffer
+ * @return ABH_SUCCESS on success, error code on failure
+ */
+int abh_check_msg(abh_buffer_t* msg);
+
 #ifdef __cplusplus
 }
 #endif

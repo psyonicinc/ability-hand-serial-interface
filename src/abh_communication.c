@@ -7,9 +7,6 @@ static const size_t nbytes_packed_fsr_data = 45;
 /*length of the optional motor section for reply 3 types*/
 static const size_t nbytes_tail_motor_section = 12;
 
-/*Helper for checking abh buffers. DRY*/
-int check_msg(abh_buffer_t* msg);
-
 /*
 Generic 2's complement hex checksum calculation.
 Used in the psyonic API
@@ -30,7 +27,7 @@ uint8_t abh_get_checksum(uint8_t * arr, size_t size)
 */
 bool abh_verify_checksum(abh_buffer_t * msg)
 {
-	if(check_msg(msg) != ABH_SUCCESS)
+	if(abh_check_msg(msg) != ABH_SUCCESS)
 	{
 		return false;
 	}
@@ -75,7 +72,7 @@ void abh_unpack_8bit_into_12bit(uint8_t* arr, uint16_t* vals, int valsize)
  */
 int append_uint32(uint32_t value, abh_buffer_t * frame)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -97,7 +94,7 @@ int append_uint32(uint32_t value, abh_buffer_t * frame)
  */
 int append_uint16(uint16_t value, abh_buffer_t * frame)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -116,7 +113,7 @@ int append_uint16(uint16_t value, abh_buffer_t * frame)
 */
 int abh_create_write_register_frame(abh_api_t * abh, uint32_t reg_address, uint32_t value, abh_buffer_t * frame)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -144,7 +141,7 @@ Read register request frame
 */
 int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_buffer_t * frame)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -184,7 +181,7 @@ If a read request was generated:
 */
 int abh_parse_register_reply(abh_buffer_t * frame, abh_register_reply_t * msg)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -267,7 +264,7 @@ int abh_parse_register_reply(abh_buffer_t * frame, abh_register_reply_t * msg)
  */
 int abh_create_short_api_frame(abh_api_t * abh, abh_buffer_t * frame)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -296,7 +293,7 @@ int abh_create_short_api_frame(abh_api_t * abh, abh_buffer_t * frame)
  */
 int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -364,7 +361,7 @@ Blocking function to parse ability hand frame response/reply
  */
 int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 {
-	int chkrc = check_msg(frame);
+	int chkrc = abh_check_msg(frame);
 	if(chkrc != ABH_SUCCESS)
 	{
 		return chkrc;
@@ -455,7 +452,7 @@ int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 /*
 	Helper for checking abh buffers
 */
-int check_msg(abh_buffer_t* msg)
+int abh_check_msg(abh_buffer_t* msg)
 {
 	if(msg == NULL)
 	{

@@ -1,0 +1,20 @@
+#ifndef ABH_CRC_H
+#define ABH_CRC_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+uint16_t abh_crc16(const unsigned char * arr, size_t size);
+uint32_t abh_crc32(const unsigned char * message, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+

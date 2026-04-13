@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cmath>
 #include <chrono>
+#include "abh_crc.h"
 
 AbilityHand::AbilityHand()
 {
@@ -622,16 +623,94 @@ int AbilityHand::raw_exchange_udp(int timeout_ms)
     return read_and_unstuff_udp(timeout_ms);
 }
 
-int AbilityHand::raw_exchange(int timeout_ms)
+int AbilityHand::stuff_and_write()
 {
     if (iface_ == IFACE_SERIAL)
 	{
-        return raw_exchange_serial(timeout_ms);
+		return stuff_and_write_serial();
 	}
     else
 	{
-        return raw_exchange_udp(timeout_ms);
+		return stuff_and_write_udp();
 	}
+}
+
+int AbilityHand::read_and_unstuff(int timeout_ms)
+{
+    if (iface_ == IFACE_SERIAL)
+	{
+		return read_and_unstuff_serial(timeout_ms);
+	}
+    else
+	{
+		return read_and_unstuff_udp(timeout_ms);
+	}
+}
+
+int AbilityHand::raw_exchange(int timeout_ms)
+{
+    int rc = stuff_and_write();
+    if (rc != ABH_SUCCESS) 
+	{
+		return rc;
+	}
+    return read_and_unstuff(timeout_ms);
+}
+
+int AbilityHand::command_handling(const uint8_t* payload, size_t payload_len,
+                                   std::vector<std::vector<uint8_t>>& responses,
+                                   int nresponses_expected, int timeout_ms)
+{
+    // Build TX frame: [address][0x77][payload...][crc16_lo][crc16_hi]
+    const size_t header_len = 2;
+    const size_t crc_len = 2;
+    size_t frame_len = header_len + payload_len + crc_len;
+    if (frame_len > tx_frame_.size)
+    {
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+
+    tx_frame_.buf[0] = hand_state.address;
+    tx_frame_.buf[1] = 0x77;
+    memcpy(tx_frame_.buf + header_len, payload, payload_len);
+
+    uint16_t crc = abh_crc16(tx_frame_.buf, header_len + payload_len);
+    tx_frame_.buf[header_len + payload_len]     = (uint8_t)(crc & 0xFF);
+    tx_frame_.buf[header_len + payload_len + 1] = (uint8_t)((crc >> 8) & 0xFF);
+    tx_frame_.len = frame_len;
+
+    int rc = stuff_and_write();
+    if (rc != ABH_SUCCESS) 
+	{
+		return rc;
+	}
+
+    responses.clear();
+    for (int i = 0; i < nresponses_expected; i++)
+    {
+        rc = read_and_unstuff(timeout_ms);
+        if (rc != ABH_SUCCESS) 
+		{
+			return rc;
+		}
+
+        if (rx_frame_.len < crc_len + 1)
+		{
+            return ABH_ERROR_REPLY_LEN_INVALID;
+		}
+
+        size_t rx_payload_len = rx_frame_.len - crc_len;
+        uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
+        uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
+                                ((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
+        if (expected_crc != received_crc)
+        {
+			return ABH_ERROR_CHECKSUM_MISMATCH;
+		}
+
+        responses.emplace_back(rx_frame_.buf, rx_frame_.buf + rx_payload_len);
+    }
+    return ABH_SUCCESS;
 }
 
 

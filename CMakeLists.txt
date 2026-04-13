@@ -30,6 +30,7 @@ add_library(ability_hand STATIC
     src/abh_communication.c
     src/udp.cpp
     src/tinycsocket_common.c
+	src/abh_crc.c
     ${TINYCSOCKET_PLATFORM_SRC}
 )
 

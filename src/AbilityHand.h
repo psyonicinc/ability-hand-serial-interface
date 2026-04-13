@@ -111,6 +111,9 @@ public:
     // Core communication
     int exchange_motion_data(int timeout_ms = 5);
     int exchange_short_msg(int timeout_ms = 5);
+    int command_handling(const uint8_t* payload, size_t payload_len,
+                         std::vector<std::vector<uint8_t>>& responses,
+                         int nresponses_expected, int timeout_ms = 50);
 
     // High-level setters (float-based with automatic unit conversion)
     void set_position_targets(const float positions_deg[NUM_CHANNELS]);
@@ -189,6 +192,8 @@ private:
 	int stuff_and_write_udp();
 	int read_and_unstuff_serial(int timeout_ms);
 	int read_and_unstuff_udp(int timeout_ms);
+	int stuff_and_write();					// dispatches on iface_
+	int read_and_unstuff(int timeout_ms);	// dispatches on iface_
 	int raw_exchange_serial(int timeout_ms);	// stuff_and_write_serial + read_and_unstuff_serial
 	int raw_exchange_udp(int timeout_ms);		// stuff_and_write_udp + read_and_unstuff_udp
 	int raw_exchange(int timeout_ms);			// dispatches on iface_

@@ -185,8 +185,12 @@ private:
     void abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
     void abh_to_cobs(abh_buffer_t* in, cobs_buf_t* out);
 
-	int raw_exchange_serial(int timeout_ms);	// transport only: stuff tx_frame_, send, receive, unstuff into rx_frame_
-	int raw_exchange_udp(int timeout_ms);
+	int stuff_and_write_serial();
+	int stuff_and_write_udp();
+	int read_and_unstuff_serial(int timeout_ms);
+	int read_and_unstuff_udp(int timeout_ms);
+	int raw_exchange_serial(int timeout_ms);	// stuff_and_write_serial + read_and_unstuff_serial
+	int raw_exchange_udp(int timeout_ms);		// stuff_and_write_udp + read_and_unstuff_udp
 	int raw_exchange(int timeout_ms);			// dispatches on iface_
 };
 

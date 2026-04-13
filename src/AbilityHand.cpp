@@ -493,7 +493,7 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
     stats_.num_successful_reads++;
     return ABH_SUCCESS;
 }
-int AbilityHand::raw_exchange_serial(int timeout_ms)
+int AbilityHand::stuff_and_write_serial()
 {
     int bytes_written = 0;
     if (stuffing_mode_ == STUFFING_PPP)
@@ -506,17 +506,17 @@ int AbilityHand::raw_exchange_serial(int timeout_ms)
     {
         abh_to_cobs(&tx_frame_, &tx_cobs_buf_);
         if (cobs_encode_single_buffer(&tx_cobs_buf_) != COBS_SUCCESS)
-		{
-			return ABH_ERROR_WRITE_FAILED;
-		}
+            return ABH_ERROR_WRITE_FAILED;
         bytes_written = serial_.write(tx_cobs_buf_.buf, (int)tx_cobs_buf_.length);
     }
     stats_.num_writes++;
     if (bytes_written <= 0)
-	{
         return ABH_ERROR_WRITE_FAILED;
-	}
+    return ABH_SUCCESS;
+}
 
+int AbilityHand::read_and_unstuff_serial(int timeout_ms)
+{
     if (stuffing_mode_ == STUFFING_PPP)
     {
         int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
@@ -526,9 +526,7 @@ int AbilityHand::raw_exchange_serial(int timeout_ms)
             return ABH_ERROR_TIMEOUT;
         }
         if (rxlen <= 0)
-        {
-			return ABH_ERROR_INVALID_ARGUMENT;
-		}
+            return ABH_ERROR_INVALID_ARGUMENT;
         rx_buffer_alias_.length = rxlen;
         PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
         rx_frame_.len = rx_ppp_unstuff_alias_.length;
@@ -542,20 +540,16 @@ int AbilityHand::raw_exchange_serial(int timeout_ms)
             return ABH_ERROR_TIMEOUT;
         }
         if (rxlen <= 0)
-		{
             return ABH_ERROR_INVALID_ARGUMENT;
-		}
         rx_cobs_encoded_.length = rxlen;
         if (cobs_decode_double_buffer(&rx_cobs_encoded_, &rx_cobs_decoded_) != COBS_SUCCESS)
-        {
-			return ABH_ERROR_INVALID_ARGUMENT;
-		}
+            return ABH_ERROR_INVALID_ARGUMENT;
         rx_frame_.len = rx_cobs_decoded_.length;
     }
     return ABH_SUCCESS;
 }
 
-int AbilityHand::raw_exchange_udp(int timeout_ms)
+int AbilityHand::stuff_and_write_udp()
 {
     if (!m_socket.connected)
         return ABH_ERROR_NOT_CONNECTED;
@@ -579,9 +573,17 @@ int AbilityHand::raw_exchange_udp(int timeout_ms)
         stats_.num_writes++;
     else
         return ABH_ERROR_WRITE_FAILED;
+    return ABH_SUCCESS;
+}
+
+int AbilityHand::read_and_unstuff_udp(int timeout_ms)
+{
+    if (!m_socket.connected)
+        return ABH_ERROR_NOT_CONNECTED;
 
     struct TcsAddress src;
     size_t bytes_received = 0;
+    TcsReturnCode res;
     tcs_set_receive_timeout(m_socket.socket, timeout_ms);
 
     if (stuffing_mode_ == STUFFING_PPP)
@@ -604,6 +606,20 @@ int AbilityHand::raw_exchange_udp(int timeout_ms)
         rx_frame_.len = rx_cobs_decoded_.length;
     }
     return ABH_SUCCESS;
+}
+
+int AbilityHand::raw_exchange_serial(int timeout_ms)
+{
+    int rc = stuff_and_write_serial();
+    if (rc != ABH_SUCCESS) return rc;
+    return read_and_unstuff_serial(timeout_ms);
+}
+
+int AbilityHand::raw_exchange_udp(int timeout_ms)
+{
+    int rc = stuff_and_write_udp();
+    if (rc != ABH_SUCCESS) return rc;
+    return read_and_unstuff_udp(timeout_ms);
 }
 
 int AbilityHand::raw_exchange(int timeout_ms)

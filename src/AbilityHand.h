@@ -111,8 +111,8 @@ public:
     // Core communication
     int exchange_motion_data(int timeout_ms = 5);
     int exchange_short_msg(int timeout_ms = 5);
-    int command_handling(const uint8_t* payload, size_t payload_len,
-                         std::vector<std::vector<uint8_t>>& responses,
+    int command_handling(const std::string& payload,
+                         std::vector<std::string>& responses,
                          int nresponses_expected, int timeout_ms = 50);
 
     // High-level setters (float-based with automatic unit conversion)

@@ -713,60 +713,27 @@ int AbilityHand::command_handling(const std::string& payload,
 	}
 
 	responses.clear();
-	// for (int i = 0; i < nresponses_expected; i++)
-	// {
-	// 	rc = read_and_unstuff(timeout_ms);
-	// 	if (rc != ABH_SUCCESS)
-	// 	{
-	// 		return rc;
-	// 	}
-
-	// 	if (rx_frame_.len < crc_len + 1)
-	// 	{
-	// 		return ABH_ERROR_REPLY_LEN_INVALID;
-	// 	}
-
-	// 	size_t rx_payload_len = rx_frame_.len - crc_len;
-	// 	uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
-	// 	uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
-	// 							((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
-	// 	if (expected_crc != received_crc)
-	// 		return ABH_ERROR_CHECKSUM_MISMATCH;
-
-	// 	responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
-	// }
-	int nresponses = 0;
-	int nerrors = 0;
-	while(1)
+	for (int i = 0; i < nresponses_expected; i++)
 	{
-		// printf("attempts: %d\n", nattempts);
 		rc = read_and_unstuff(timeout_ms);
-		if(rc == ABH_ERROR_TIMEOUT)
+		if (rc != ABH_SUCCESS)
 		{
 			return rc;
 		}
-		else if(rc != ABH_SUCCESS)
+
+		if (rx_frame_.len < crc_len + 1)
 		{
-			nerrors++;
+			return ABH_ERROR_REPLY_LEN_INVALID;
 		}
-		if(pop_crc16(&rx_frame_) == true)
-		{
-			responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_frame_.len);
-			nresponses++;
-		}
-		else
-		{
-			// printf("Mismatch, len = %d\n", rx_frame_.len);
-			nerrors++;
-		}
-		if(nresponses == nresponses_expected)
-		{
-			return ABH_SUCCESS;
-		}
-		if(nerrors > nresponses_expected)
-		{
-			return ABH_ERROR_CONNECTION_FAILED;	//placeholder error
-		}
+
+		size_t rx_payload_len = rx_frame_.len - crc_len;
+		uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
+		uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
+								((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
+		if (expected_crc != received_crc)
+			return ABH_ERROR_CHECKSUM_MISMATCH;
+
+		responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
 	}
 	return ABH_SUCCESS;
 }

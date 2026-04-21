@@ -50,6 +50,7 @@ target_link_libraries(ability_hand PUBLIC
     serial
     PPP
     cobs
+	bytestream
 	# tinycsocket	#uncomment to regenerate tinycsocket files
 )
 

@@ -573,7 +573,12 @@ int AbilityHand::stuff_and_write_serial()
 	if (stuffing_mode_ == STUFFING_PPP)
 	{
 		abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
-		PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+
+		tx_stuff_buf_.buf[0] = FRAME_CHAR;
+		ppp_buffer_t ppp_tx_alias = {&tx_stuff_buf_.buf[1], tx_stuff_buf_.size-1, 0};
+		PPP_stuff(&tx_unstuff_alias_, &ppp_tx_alias);
+		tx_stuff_buf_.length = ppp_tx_alias.length + 1;
+
 		bytes_written = serial_.write(tx_stuff_buf_.buf, (int)tx_stuff_buf_.length);
 	}
 	else
@@ -633,7 +638,13 @@ int AbilityHand::stuff_and_write_udp()
 	if (stuffing_mode_ == STUFFING_PPP)
 	{
 		abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
-		PPP_stuff(&tx_unstuff_alias_, &tx_stuff_buf_);
+
+		tx_stuff_buf_.buf[0] = FRAME_CHAR;
+		ppp_buffer_t ppp_tx_alias = {&tx_stuff_buf_.buf[1], tx_stuff_buf_.size-1, 0};
+		PPP_stuff(&tx_unstuff_alias_, &ppp_tx_alias);
+		tx_stuff_buf_.length = ppp_tx_alias.length + 1;
+
+
 		res = tcs_send(m_socket.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_NO_FLAGS, &bytes_sent);
 	}
 	else
@@ -777,7 +788,7 @@ int AbilityHand::command_handling(const std::string& payload,
 		{
 			return ABH_ERROR_REPLY_LEN_INVALID;
 		}
-
+		/*TODO: fix this with proper silent retry on invalid frame reception, matching other calls*/
 		size_t rx_payload_len = rx_frame_.len - crc_len;
 		uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
 		uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |

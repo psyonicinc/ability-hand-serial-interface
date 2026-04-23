@@ -22,6 +22,7 @@ AbilityHand::AbilityHand()
 	iface_ = IFACE_SERIAL;
 	stuffing_mode_ = STUFFING_PPP;
 	m_socket = { TCS_NULLSOCKET, "192.168.1.100", 5000, false };
+	start_time();
 }
 
 AbilityHand::~AbilityHand()
@@ -112,7 +113,7 @@ std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeo
 		{
 			break;
 		}
-		
+
 		uint32_t remaining = (uint32_t)(timeout - (uint32_t)elapsed);
 		uint32_t recv_timeout = remaining < 50u ? remaining : 50u;
 		tcs_set_receive_timeout(sock, (int)recv_timeout);
@@ -250,6 +251,17 @@ bool AbilityHand::is_connected() const
 	{
 		return m_socket.connected;
 	}
+}
+
+void AbilityHand::start_time()
+{
+	timestamp_ = std::chrono::steady_clock::now();
+}
+
+int64_t AbilityHand::get_ms() const
+{
+	return std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - timestamp_).count();
 }
 
 void AbilityHand::init_buffers()
@@ -411,14 +423,35 @@ int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_repl
 	if (rc != ABH_SUCCESS)
 		return rc;
 
-	rc = raw_exchange(timeout_ms);
-	if (rc != ABH_SUCCESS)
+	rc = stuff_and_write();
+	if (rc != ABH_SUCCESS) 
+	{
 		return rc;
+	}
+	//hand may return ~reply~ (old byte stuffing setup - 0 length sync frame), or 0~reply~ (crappy waveshare adapter that puts a null idle byte in). 
+	//This code silently tosses invalid frames, returning only on timeout, success, or a critical read error
+	start_time();
+	while(get_ms() < timeout_ms)
+	{
+		rc = read_and_unstuff(timeout_ms);
+		if (rc != ABH_SUCCESS)
+		{
+			stats_.num_parse_errors++;
+			return rc;
+		}
 
-	reply.register_value = 0;
-	reply.reply_type = ABH_REGISTER_INVALID_REPLY;
-	reply.request_valid = false;
-	return abh_parse_register_reply(&rx_frame_, &reply);
+		reply.register_value = 0;
+		reply.reply_type = ABH_REGISTER_INVALID_REPLY;
+		reply.request_valid = false;
+		rc = abh_parse_register_reply(&rx_frame_, &reply);
+		if (rc == ABH_SUCCESS)
+		{
+			stats_.num_successful_reads++;
+			return ABH_SUCCESS;
+		}
+	}
+	stats_.num_parse_errors++;
+	return ABH_ERROR_TIMEOUT;
 }
 
 int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int timeout_ms)
@@ -431,14 +464,34 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
 	if (rc != ABH_SUCCESS)
 		return rc;
 
-	rc = raw_exchange(timeout_ms);
-	if (rc != ABH_SUCCESS)
+	rc = stuff_and_write();
+	if (rc != ABH_SUCCESS) 
+	{
 		return rc;
+	}
 
-	reply.register_value = 0;
-	reply.reply_type = ABH_REGISTER_INVALID_REPLY;
-	reply.request_valid = false;
-	return abh_parse_register_reply(&rx_frame_, &reply);
+	start_time();
+	while(get_ms() < timeout_ms)
+	{
+		rc = read_and_unstuff(timeout_ms);
+		if (rc != ABH_SUCCESS)
+		{
+			stats_.num_parse_errors++;
+			return rc;
+		}
+
+		reply.register_value = 0;
+		reply.reply_type = ABH_REGISTER_INVALID_REPLY;
+		reply.request_valid = false;
+		rc = abh_parse_register_reply(&rx_frame_, &reply);
+		if (rc == ABH_SUCCESS)
+		{
+			stats_.num_successful_reads++;
+			return ABH_SUCCESS;
+		}
+	}
+	stats_.num_parse_errors++;
+	return ABH_ERROR_TIMEOUT;
 }
 
 int AbilityHand::exchange_motion_data(int timeout_ms)
@@ -450,22 +503,31 @@ int AbilityHand::exchange_motion_data(int timeout_ms)
 	if (rc != ABH_SUCCESS)
 		return rc;
 
-	rc = raw_exchange(timeout_ms);
+	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)
 	{
-		stats_.num_parse_errors++;
 		return rc;
 	}
 
-	rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-	if (rc != ABH_SUCCESS)
+	start_time();
+	while(get_ms() < timeout_ms)
 	{
-		stats_.num_parse_errors++;
-		return rc;
-	}
+		rc = read_and_unstuff(timeout_ms);
+		if (rc != ABH_SUCCESS)
+		{
+			stats_.num_parse_errors++;
+			return rc;
+		}
 
-	stats_.num_successful_reads++;
-	return ABH_SUCCESS;
+		rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
+		if (rc == ABH_SUCCESS)
+		{
+			stats_.num_successful_reads++;
+			return ABH_SUCCESS;
+		}
+	}
+	stats_.num_parse_errors++;
+	return ABH_ERROR_TIMEOUT;
 }
 
 int AbilityHand::exchange_short_msg(int timeout_ms)
@@ -477,23 +539,34 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
 	if (rc != ABH_SUCCESS)
 		return rc;
 
-	rc = raw_exchange(timeout_ms);
+	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)
 	{
-		stats_.num_parse_errors++;
 		return rc;
 	}
 
-	rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-	if (rc != ABH_SUCCESS)
+	start_time();
+	while(get_ms() < timeout_ms)
 	{
-		stats_.num_parse_errors++;
-		return rc;
-	}
+		rc = read_and_unstuff(timeout_ms);
+		if (rc != ABH_SUCCESS)
+		{
+			stats_.num_parse_errors++;
+			return rc;
+		}
 
-	stats_.num_successful_reads++;
-	return ABH_SUCCESS;
+		rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
+		if (rc == ABH_SUCCESS)
+		{
+			stats_.num_successful_reads++;
+			return ABH_SUCCESS;
+		}
+
+	}
+	stats_.num_parse_errors++;
+	return ABH_ERROR_TIMEOUT;
 }
+
 int AbilityHand::stuff_and_write_serial()
 {
 	int bytes_written = 0;
@@ -609,20 +682,7 @@ int AbilityHand::read_and_unstuff_udp(int timeout_ms)
 	return ABH_SUCCESS;
 }
 
-int AbilityHand::raw_exchange_serial(int timeout_ms)
-{
-	int rc = stuff_and_write_serial();
-	if (rc != ABH_SUCCESS) return rc;
-	//TODO: implement outer timeout for read_and_unstuff_serial which  couples with decode and validity checks
-	return read_and_unstuff_serial(timeout_ms);
-}
 
-int AbilityHand::raw_exchange_udp(int timeout_ms)
-{
-	int rc = stuff_and_write_udp();
-	if (rc != ABH_SUCCESS) return rc;
-	return read_and_unstuff_udp(timeout_ms);
-}
 
 int AbilityHand::stuff_and_write()
 {
@@ -648,15 +708,6 @@ int AbilityHand::read_and_unstuff(int timeout_ms)
 	}
 }
 
-int AbilityHand::raw_exchange(int timeout_ms)
-{
-	int rc = stuff_and_write();
-	if (rc != ABH_SUCCESS) 
-	{
-		return rc;
-	}
-	return read_and_unstuff(timeout_ms);
-}
 
 bool pop_crc16(abh_buffer_t * msg)
 {
@@ -778,7 +829,7 @@ void AbilityHand::set_torque_targets(const float torques_mNm[NUM_CHANNELS])
 	for (int ch = 0; ch < NUM_CHANNELS; ch++)
 	{
 		float current_amps = torques_mNm[ch] / MOTOR_TORQUE_CONSTANT;
-		hand_state.iq_desired[ch] = (int16_t)(current_amps / MOTOR_IQ_CONV_CONSTANT); 
+		hand_state.iq_desired[ch] = (int16_t)(current_amps / MOTOR_IQ_CONV_CONSTANT);
 	}
 }
 

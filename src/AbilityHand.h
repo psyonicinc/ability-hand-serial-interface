@@ -17,6 +17,7 @@ extern "C" {
 #include "cobs.h"
 #include <cstdint>
 #include <vector>
+#include <chrono>
 
 // Define M_PI for Windows
 #ifndef M_PI
@@ -194,9 +195,10 @@ private:
 	int read_and_unstuff_udp(int timeout_ms);
 	int stuff_and_write();					// dispatches on iface_
 	int read_and_unstuff(int timeout_ms);	// dispatches on iface_
-	int raw_exchange_serial(int timeout_ms);	// stuff_and_write_serial + read_and_unstuff_serial
-	int raw_exchange_udp(int timeout_ms);		// stuff_and_write_udp + read_and_unstuff_udp
-	int raw_exchange(int timeout_ms);			// dispatches on iface_
+
+	std::chrono::steady_clock::time_point timestamp_;
+	void start_time();
+	int64_t get_ms() const;
 };
 
 #endif // ABILITY_HAND_H

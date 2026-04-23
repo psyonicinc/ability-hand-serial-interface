@@ -520,7 +520,7 @@ int AbilityHand::read_and_unstuff_serial(int timeout_ms)
 {
 	if (stuffing_mode_ == STUFFING_PPP)
 	{
-		int rxlen = serial_.read_dual_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
+		int rxlen = serial_.read_until_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
 		if (rxlen == -2)
 		{
 			stats_.num_timeouts++;
@@ -613,6 +613,7 @@ int AbilityHand::raw_exchange_serial(int timeout_ms)
 {
 	int rc = stuff_and_write_serial();
 	if (rc != ABH_SUCCESS) return rc;
+	//TODO: implement outer timeout for read_and_unstuff_serial which  couples with decode and validity checks
 	return read_and_unstuff_serial(timeout_ms);
 }
 

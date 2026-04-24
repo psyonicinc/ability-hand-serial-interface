@@ -137,15 +137,24 @@ public:
 
     // Hand state
     abh_api_t hand_state;
+	StuffingMode stuffing_mode;
+	abh_buffer_t rx_frame;
 
 	UdpState m_socket;
 
 private:
     // Serial communication
     Serial serial_;
+	
+	//second copy of the callback and context used by serial_ - we re-use the parser in other comm modes like udp. 
+	//could also make these public and part of serial, but pointers are very cheap, so not a big deal. Use register callback 
+	//as primary entrypoint to prevent code re-use
+	Serial::frame_cb_t _abh_frame_parser_cb;
+	void * _abh_parser_context; 
+	int register_callback(Serial::frame_cb_t cb, void * user_context = NULL);
+
 
 	CommType iface_;
-	StuffingMode stuffing_mode_;
 
     // TX buffers (unstuffed → stuffed)
     unsigned char tx_mem_[128];
@@ -164,7 +173,7 @@ private:
     unsigned char rx_unstuff_mem_[128];
     ppp_buffer_t rx_ppp_unstuff_alias_;
     cobs_buf_t rx_cobs_decoded_;         // aliases rx_unstuff_mem_ for COBS decode
-    abh_buffer_t rx_frame_;
+    
 
     // Statistics tracking
     Statistics stats_;
@@ -185,16 +194,15 @@ private:
     static constexpr float FSR_FORCE_C2 = 0.878894f;
 
     // Helper methods
-    void init_buffers();
     void abh_to_ppp(abh_buffer_t* in, ppp_buffer_t* out);
     void abh_to_cobs(abh_buffer_t* in, cobs_buf_t* out);
 
 	int stuff_and_write_serial();
 	int stuff_and_write_udp();
-	int read_and_unstuff_serial(int timeout_ms);
-	int read_and_unstuff_udp(int timeout_ms);
+	int read_and_parse_serial(int timeout_ms);
+	int read_and_parse_udp(int timeout_ms);
 	int stuff_and_write();					// dispatches on iface_
-	int read_and_unstuff(int timeout_ms);	// dispatches on iface_
+	int read_and_parse(int timeout_ms);	// dispatches on iface_
 
 	std::chrono::steady_clock::time_point timestamp_;
 	void start_time();

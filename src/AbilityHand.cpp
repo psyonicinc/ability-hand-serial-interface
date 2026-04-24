@@ -20,9 +20,53 @@ AbilityHand::AbilityHand()
 	memset(rx_stuffed_mem_, 0, sizeof(rx_stuffed_mem_));
 	memset(rx_unstuff_mem_, 0, sizeof(rx_unstuff_mem_));
 	iface_ = IFACE_SERIAL;
-	stuffing_mode_ = STUFFING_PPP;
+	stuffing_mode = STUFFING_PPP;
 	m_socket = { TCS_NULLSOCKET, "192.168.1.100", 5000, false };
 	start_time();
+
+
+
+	// Initialize TX buffers
+	tx_frame_.buf = tx_mem_;
+	tx_frame_.size = sizeof(tx_mem_);
+	tx_frame_.len = 0;
+
+	tx_unstuff_alias_.buf = tx_mem_;
+	tx_unstuff_alias_.size = sizeof(tx_mem_);
+	tx_unstuff_alias_.length = 0;
+
+	tx_stuff_buf_.buf = tx_stuffed_mem_;
+	tx_stuff_buf_.size = sizeof(tx_stuffed_mem_);
+	tx_stuff_buf_.length = 0;
+
+	tx_cobs_buf_.buf = tx_stuffed_mem_;
+	tx_cobs_buf_.size = sizeof(tx_stuffed_mem_);
+	tx_cobs_buf_.length = 0;
+	tx_cobs_buf_.encoded_state = COBS_DECODED;
+
+	// Initialize RX buffers
+	rx_buffer_alias_.buf = rx_stuffed_mem_;
+	rx_buffer_alias_.size = sizeof(rx_stuffed_mem_);
+	rx_buffer_alias_.length = 0;
+
+	rx_cobs_encoded_.buf = rx_stuffed_mem_;
+	rx_cobs_encoded_.size = sizeof(rx_stuffed_mem_);
+	rx_cobs_encoded_.length = 0;
+	rx_cobs_encoded_.encoded_state = COBS_ENCODED;
+
+	rx_ppp_unstuff_alias_.buf = rx_unstuff_mem_;
+	rx_ppp_unstuff_alias_.size = sizeof(rx_unstuff_mem_);
+	rx_ppp_unstuff_alias_.length = 0;
+
+	rx_cobs_decoded_.buf = rx_unstuff_mem_;
+	rx_cobs_decoded_.size = sizeof(rx_unstuff_mem_);
+	rx_cobs_decoded_.length = 0;
+	rx_cobs_decoded_.encoded_state = COBS_DECODED;
+
+	//initalize decode buffer. Destination/unstuff buffer
+	rx_frame.buf = rx_unstuff_mem_;
+	rx_frame.size = sizeof(rx_unstuff_mem_);
+	rx_frame.len = 0;
 }
 
 AbilityHand::~AbilityHand()
@@ -32,6 +76,102 @@ AbilityHand::~AbilityHand()
 	{
 		udp_disconnect(&m_socket);
 	}
+}
+
+
+static int unstuff_stream(abh_buffer_t * dest, bytestream_t * stream, AbilityHand::StuffingMode mode)
+{
+	if(mode == AbilityHand::STUFFING_PPP)
+	{
+
+	}
+	else if(mode == AbilityHand::STUFFING_COBS)
+	{
+
+	}
+	return ABH_ERROR_INVALID_ARGUMENT;
+}
+
+static bool _motion_data_callback(bytestream_t * stream, void * context)
+{
+	if(context == NULL)
+	{
+		return false;	//guard. This forces read_until_valid to poll until timeout
+	}
+	AbilityHand * hand = (AbilityHand*)context;
+
+
+	//hand->unstuff(abh_buffer_t * alias)
+	// rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
+	// if (rc == ABH_SUCCESS)
+	// {
+
+	return false;
+}
+
+/*Should consist of ONLY pointers*/
+typedef struct RegisterContext
+{
+	AbilityHand * hand;
+	abh_register_reply_t * reg_reply;
+}RegisterContext;
+
+/*
+Contract:
+unstuff the stream and pass it to abh_parse_register_reply
+On success, return true.
+On fail, return false.
+Easy!
+*/
+static bool _abh_register_callback(bytestream_t * stream, void * context)
+{
+	if(context == NULL)
+	{
+		return false;	//guard. This forces read_until_valid to poll until timeout
+	}
+
+	RegisterContext * ctx = (RegisterContext*)context;
+	AbilityHand * hand = ctx->hand;
+	abh_register_reply_t * reply = ctx->reg_reply;
+
+
+	// int rc = abh_parse_register_reply(&rx_frame_, &reply);
+
+	return false;
+
+}
+
+
+typedef struct CommandHandlingContext
+{
+	AbilityHand * hand;
+	std::vector<std::string> * replies;
+	int response_count;	//must initialize to zero!
+}CommandHandlingContext;
+
+static bool _command_handling_callback(bytestream_t * stream, void * context)
+{
+	if(context == NULL)
+	{
+		return false;	//guard. This forces read_until_valid to poll until timeout
+	}
+
+		// responses.clear();
+		// if (rx_frame_.len < crc_len + 1)
+		// {
+		// 	return ABH_ERROR_REPLY_LEN_INVALID;
+		// }
+		// /*TODO: fix this with proper silent retry on invalid frame reception, matching other calls*/
+		// size_t rx_payload_len = rx_frame_.len - crc_len;
+		// uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
+		// uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
+		// 						((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
+		// if (expected_crc != received_crc)
+		// 	return ABH_ERROR_CHECKSUM_MISMATCH;
+
+		// responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
+
+	return false;
 }
 
 std::vector<UdpEndpoint> AbilityHand::discover_forwarding_servers(uint32_t timeout)
@@ -161,7 +301,6 @@ int AbilityHand::init_udp(const UdpEndpoint& endpoint)
 
 int AbilityHand::init_udp(const char * ip, uint16_t port)
 {
-	init_buffers();
 	for(int i = 0; i < sizeof(m_socket.ip); i++)
 	{
 		m_socket.ip[i] = 0;
@@ -211,7 +350,7 @@ int AbilityHand::init(unsigned long baud_rate)
 		return ABH_ERROR_CONNECTION_FAILED;
 	}
 
-	init_buffers();
+
 	reset_statistics();
 
 	return ABH_SUCCESS;
@@ -229,7 +368,7 @@ int AbilityHand::init(const char* port_name, unsigned long baud_rate)
 		return ABH_ERROR_CONNECTION_FAILED;
 	}
 
-	init_buffers();
+	
 	reset_statistics();
 
 	return ABH_SUCCESS;
@@ -264,49 +403,6 @@ int64_t AbilityHand::get_ms() const
 		std::chrono::steady_clock::now() - timestamp_).count();
 }
 
-void AbilityHand::init_buffers()
-{
-	// Initialize TX buffers
-	tx_frame_.buf = tx_mem_;
-	tx_frame_.size = sizeof(tx_mem_);
-	tx_frame_.len = 0;
-
-	tx_unstuff_alias_.buf = tx_mem_;
-	tx_unstuff_alias_.size = sizeof(tx_mem_);
-	tx_unstuff_alias_.length = 0;
-
-	tx_stuff_buf_.buf = tx_stuffed_mem_;
-	tx_stuff_buf_.size = sizeof(tx_stuffed_mem_);
-	tx_stuff_buf_.length = 0;
-
-	tx_cobs_buf_.buf = tx_stuffed_mem_;
-	tx_cobs_buf_.size = sizeof(tx_stuffed_mem_);
-	tx_cobs_buf_.length = 0;
-	tx_cobs_buf_.encoded_state = COBS_DECODED;
-
-	// Initialize RX buffers
-	rx_buffer_alias_.buf = rx_stuffed_mem_;
-	rx_buffer_alias_.size = sizeof(rx_stuffed_mem_);
-	rx_buffer_alias_.length = 0;
-
-	rx_cobs_encoded_.buf = rx_stuffed_mem_;
-	rx_cobs_encoded_.size = sizeof(rx_stuffed_mem_);
-	rx_cobs_encoded_.length = 0;
-	rx_cobs_encoded_.encoded_state = COBS_ENCODED;
-
-	rx_ppp_unstuff_alias_.buf = rx_unstuff_mem_;
-	rx_ppp_unstuff_alias_.size = sizeof(rx_unstuff_mem_);
-	rx_ppp_unstuff_alias_.length = 0;
-
-	rx_cobs_decoded_.buf = rx_unstuff_mem_;
-	rx_cobs_decoded_.size = sizeof(rx_unstuff_mem_);
-	rx_cobs_decoded_.length = 0;
-	rx_cobs_decoded_.encoded_state = COBS_DECODED;
-
-	rx_frame_.buf = rx_unstuff_mem_;
-	rx_frame_.size = sizeof(rx_unstuff_mem_);
-	rx_frame_.len = 0;
-}
 
 int AbilityHand::set_motion_mode(MotionMode mode)
 {
@@ -423,35 +519,26 @@ int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_repl
 	if (rc != ABH_SUCCESS)
 		return rc;
 
+	/*create a context for registration of read callback*/
+	RegisterContext reg_context = 
+	{
+		this,
+		&reply
+	};
+	register_callback(&_abh_register_callback, &reg_context);
+
 	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS) 
 	{
 		return rc;
 	}
-	//hand may return ~reply~ (old byte stuffing setup - 0 length sync frame), or 0~reply~ (crappy waveshare adapter that puts a null idle byte in). 
-	//This code silently tosses invalid frames, returning only on timeout, success, or a critical read error
-	start_time();
-	while(get_ms() < timeout_ms)
-	{
-		rc = read_and_unstuff(timeout_ms);
-		if (rc != ABH_SUCCESS)
-		{
-			stats_.num_parse_errors++;
-			return rc;
-		}
 
-		reply.register_value = 0;
-		reply.reply_type = ABH_REGISTER_INVALID_REPLY;
-		reply.request_valid = false;
-		rc = abh_parse_register_reply(&rx_frame_, &reply);
-		if (rc == ABH_SUCCESS)
-		{
-			stats_.num_successful_reads++;
-			return ABH_SUCCESS;
-		}
+	rc = read_and_parse(timeout_ms);
+	if (rc != ABH_SUCCESS)
+	{
+		stats_.num_parse_errors++;
 	}
-	stats_.num_parse_errors++;
-	return ABH_ERROR_TIMEOUT;
+	return rc;
 }
 
 int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int timeout_ms)
@@ -464,34 +551,26 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
 	if (rc != ABH_SUCCESS)
 		return rc;
 
+	/*create a context for registration of read callback*/
+	RegisterContext reg_context = 
+	{
+		this,
+		&reply
+	};
+	register_callback(&_abh_register_callback, &reg_context);
+
 	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS) 
 	{
 		return rc;
 	}
 
-	start_time();
-	while(get_ms() < timeout_ms)
+	rc = read_and_parse(timeout_ms);
+	if (rc != ABH_SUCCESS)
 	{
-		rc = read_and_unstuff(timeout_ms);
-		if (rc != ABH_SUCCESS)
-		{
-			stats_.num_parse_errors++;
-			return rc;
-		}
-
-		reply.register_value = 0;
-		reply.reply_type = ABH_REGISTER_INVALID_REPLY;
-		reply.request_valid = false;
-		rc = abh_parse_register_reply(&rx_frame_, &reply);
-		if (rc == ABH_SUCCESS)
-		{
-			stats_.num_successful_reads++;
-			return ABH_SUCCESS;
-		}
+		stats_.num_parse_errors++;
 	}
-	stats_.num_parse_errors++;
-	return ABH_ERROR_TIMEOUT;
+	return rc;
 }
 
 int AbilityHand::exchange_motion_data(int timeout_ms)
@@ -503,31 +582,20 @@ int AbilityHand::exchange_motion_data(int timeout_ms)
 	if (rc != ABH_SUCCESS)
 		return rc;
 
+	register_callback(_motion_data_callback, this);
+
 	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)
 	{
 		return rc;
 	}
 
-	start_time();
-	while(get_ms() < timeout_ms)
+	rc = read_and_parse(timeout_ms);
+	if (rc != ABH_SUCCESS)
 	{
-		rc = read_and_unstuff(timeout_ms);
-		if (rc != ABH_SUCCESS)
-		{
-			stats_.num_parse_errors++;
-			return rc;
-		}
-
-		rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-		if (rc == ABH_SUCCESS)
-		{
-			stats_.num_successful_reads++;
-			return ABH_SUCCESS;
-		}
+		stats_.num_parse_errors++;
 	}
-	stats_.num_parse_errors++;
-	return ABH_ERROR_TIMEOUT;
+	return rc;
 }
 
 int AbilityHand::exchange_short_msg(int timeout_ms)
@@ -539,38 +607,26 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
 	if (rc != ABH_SUCCESS)
 		return rc;
 
+	register_callback(_motion_data_callback, this);
+
 	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)
 	{
 		return rc;
 	}
 
-	start_time();
-	while(get_ms() < timeout_ms)
+	rc = read_and_parse(timeout_ms);
+	if (rc != ABH_SUCCESS)
 	{
-		rc = read_and_unstuff(timeout_ms);
-		if (rc != ABH_SUCCESS)
-		{
-			stats_.num_parse_errors++;
-			return rc;
-		}
-
-		rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-		if (rc == ABH_SUCCESS)
-		{
-			stats_.num_successful_reads++;
-			return ABH_SUCCESS;
-		}
-
+		stats_.num_parse_errors++;
 	}
-	stats_.num_parse_errors++;
-	return ABH_ERROR_TIMEOUT;
+	return rc;
 }
 
 int AbilityHand::stuff_and_write_serial()
 {
 	int bytes_written = 0;
-	if (stuffing_mode_ == STUFFING_PPP)
+	if (stuffing_mode == STUFFING_PPP)
 	{
 		abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
 
@@ -594,9 +650,9 @@ int AbilityHand::stuff_and_write_serial()
 	return ABH_SUCCESS;
 }
 
-int AbilityHand::read_and_unstuff_serial(int timeout_ms)
+int AbilityHand::read_and_parse_serial(int timeout_ms)
 {
-	if (stuffing_mode_ == STUFFING_PPP)
+	if (stuffing_mode == STUFFING_PPP)
 	{
 		int rxlen = serial_.read_until_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
 		if (rxlen == -2)
@@ -605,10 +661,9 @@ int AbilityHand::read_and_unstuff_serial(int timeout_ms)
 			return ABH_ERROR_TIMEOUT;
 		}
 		if (rxlen <= 0)
+		{
 			return ABH_ERROR_INVALID_ARGUMENT;
-		rx_buffer_alias_.length = rxlen;
-		PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
-		rx_frame_.len = rx_ppp_unstuff_alias_.length;
+		}
 	}
 	else
 	{
@@ -619,11 +674,9 @@ int AbilityHand::read_and_unstuff_serial(int timeout_ms)
 			return ABH_ERROR_TIMEOUT;
 		}
 		if (rxlen <= 0)
+		{
 			return ABH_ERROR_INVALID_ARGUMENT;
-		rx_cobs_encoded_.length = rxlen;
-		if (cobs_decode_double_buffer(&rx_cobs_encoded_, &rx_cobs_decoded_) != COBS_SUCCESS)
-			return ABH_ERROR_INVALID_ARGUMENT;
-		rx_frame_.len = rx_cobs_decoded_.length;
+		}
 	}
 	return ABH_SUCCESS;
 }
@@ -635,7 +688,7 @@ int AbilityHand::stuff_and_write_udp()
 
 	size_t bytes_sent = 0;
 	TcsReturnCode res;
-	if (stuffing_mode_ == STUFFING_PPP)
+	if (stuffing_mode == STUFFING_PPP)
 	{
 		abh_to_ppp(&tx_frame_, &tx_unstuff_alias_);
 
@@ -661,7 +714,21 @@ int AbilityHand::stuff_and_write_udp()
 	return ABH_SUCCESS;
 }
 
-int AbilityHand::read_and_unstuff_udp(int timeout_ms)
+/*
+Wrapper function to track callback registration within ability hand class scope
+*/
+int AbilityHand::register_callback(Serial::frame_cb_t cb, void * user_context)
+{
+	if(cb == NULL)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	_abh_frame_parser_cb = cb;
+	_abh_parser_context = user_context;
+	return serial_.register_callback(_abh_frame_parser_cb, user_context);
+}
+
+int AbilityHand::read_and_parse_udp(int timeout_ms)
 {
 	if (!m_socket.connected)
 		return ABH_ERROR_NOT_CONNECTED;
@@ -671,14 +738,18 @@ int AbilityHand::read_and_unstuff_udp(int timeout_ms)
 	TcsReturnCode res;
 	tcs_set_receive_timeout(m_socket.socket, timeout_ms);
 
-	if (stuffing_mode_ == STUFFING_PPP)
+	bytestream_t stream = {};	
+
+	if (stuffing_mode == STUFFING_PPP)
 	{
 		res = tcs_receive_from(m_socket.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_NO_FLAGS, &src, &bytes_received);
 		if (res != TCS_SUCCESS || bytes_received == 0)
 			return ABH_ERROR_TIMEOUT;
 		rx_buffer_alias_.length = bytes_received;
-		PPP_unstuff(&rx_ppp_unstuff_alias_, &rx_buffer_alias_);
-		rx_frame_.len = rx_ppp_unstuff_alias_.length;
+
+		stream.buf = rx_buffer_alias_.buf;
+		stream.size = rx_buffer_alias_.size;
+		stream.len = rx_buffer_alias_.length;
 	}
 	else
 	{
@@ -686,9 +757,15 @@ int AbilityHand::read_and_unstuff_udp(int timeout_ms)
 		if (res != TCS_SUCCESS || bytes_received == 0)
 			return ABH_ERROR_TIMEOUT;
 		rx_cobs_encoded_.length = bytes_received;
-		if (cobs_decode_double_buffer(&rx_cobs_encoded_, &rx_cobs_decoded_) != COBS_SUCCESS)
-			return ABH_ERROR_INVALID_ARGUMENT;
-		rx_frame_.len = rx_cobs_decoded_.length;
+		
+		stream.buf = rx_cobs_encoded_.buf;
+		stream.size = rx_cobs_encoded_.size;
+		stream.len = rx_cobs_encoded_.length;
+	}
+	bool valid = _abh_frame_parser_cb(&stream, _abh_parser_context);		
+	if(!valid)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;	//general error. 
 	}
 	return ABH_SUCCESS;
 }
@@ -707,15 +784,15 @@ int AbilityHand::stuff_and_write()
 	}
 }
 
-int AbilityHand::read_and_unstuff(int timeout_ms)
+int AbilityHand::read_and_parse(int timeout_ms)
 {
 	if (iface_ == IFACE_SERIAL)
 	{
-		return read_and_unstuff_serial(timeout_ms);
+		return read_and_parse_serial(timeout_ms);
 	}
 	else
 	{
-		return read_and_unstuff_udp(timeout_ms);
+		return read_and_parse_udp(timeout_ms);
 	}
 }
 
@@ -769,36 +846,25 @@ int AbilityHand::command_handling(const std::string& payload,
 	tx_frame_.buf[header_len + payload.size() + 1] = (uint8_t)((crc >> 8) & 0xFF);
 	tx_frame_.len = frame_len;
 
+	CommandHandlingContext ctx = {
+		this,
+		&responses,
+		0
+	};
+	register_callback(&_command_handling_callback, &ctx);
+
 	int rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)
 	{
 		return rc;
 	}
 
-	responses.clear();
-	for (int i = 0; i < nresponses_expected; i++)
+	rc = read_and_parse(timeout_ms);
+	if (rc != ABH_SUCCESS)
 	{
-		rc = read_and_unstuff(timeout_ms);
-		if (rc != ABH_SUCCESS)
-		{
-			return rc;
-		}
-
-		if (rx_frame_.len < crc_len + 1)
-		{
-			return ABH_ERROR_REPLY_LEN_INVALID;
-		}
-		/*TODO: fix this with proper silent retry on invalid frame reception, matching other calls*/
-		size_t rx_payload_len = rx_frame_.len - crc_len;
-		uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
-		uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
-								((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
-		if (expected_crc != received_crc)
-			return ABH_ERROR_CHECKSUM_MISMATCH;
-
-		responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
+		stats_.num_parse_errors++;
 	}
-	return ABH_SUCCESS;
+	return rc;
 }
 
 

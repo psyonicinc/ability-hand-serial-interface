@@ -81,13 +81,30 @@ AbilityHand::~AbilityHand()
 
 static int unstuff_stream(abh_buffer_t * dest, bytestream_t * stream, AbilityHand::StuffingMode mode)
 {
+	if(dest == NULL || stream == NULL)
+	{
+		return -1;
+	}
+
 	if(mode == AbilityHand::STUFFING_PPP)
 	{
-
+		ppp_buffer_t ppp_stuffed = {stream->buf, stream->size, stream->len};
+		ppp_buffer_t ppp_unstuffed = {dest->buf, dest->size, dest->len};
+		size_t rc = PPP_unstuff(&ppp_unstuffed, &ppp_stuffed);
+		if(rc != 0)
+		{
+			return ABH_SUCCESS;
+		}
 	}
 	else if(mode == AbilityHand::STUFFING_COBS)
 	{
-
+		cobs_buf_t	cobs_encoded = {stream->buf, stream->size, stream->len, COBS_ENCODED};
+		cobs_buf_t cobs_decoded = {dest->buf, dest->size, dest->len, COBS_DECODED};
+		int rc = cobs_decode_double_buffer(&cobs_encoded, &cobs_decoded);
+		if(rc == COBS_SUCCESS)
+		{
+			return ABH_SUCCESS;
+		}
 	}
 	return ABH_ERROR_INVALID_ARGUMENT;
 }
@@ -100,11 +117,16 @@ static bool _motion_data_callback(bytestream_t * stream, void * context)
 	}
 	AbilityHand * hand = (AbilityHand*)context;
 
-
-	//hand->unstuff(abh_buffer_t * alias)
-	// rc = abh_parse_movement_reply(&rx_frame_, &hand_state);
-	// if (rc == ABH_SUCCESS)
-	// {
+	int rc = unstuff_stream(&hand->rx_frame, stream, hand->stuffing_mode);
+	if(rc != ABH_SUCCESS)	//must match expected unstuffing mode or bounce as invalid
+	{
+		return false;
+	}
+	rc = abh_parse_movement_reply(&hand->rx_frame, &hand->hand_state);
+	if(rc == ABH_SUCCESS)
+	{
+		return true;
+	}
 
 	return false;
 }
@@ -134,11 +156,16 @@ static bool _abh_register_callback(bytestream_t * stream, void * context)
 	AbilityHand * hand = ctx->hand;
 	abh_register_reply_t * reply = ctx->reg_reply;
 
-
-	// int rc = abh_parse_register_reply(&rx_frame_, &reply);
-
+	int rc = unstuff_stream(&hand->rx_frame, stream, hand->stuffing_mode);
+	reply->register_value = 0;
+	reply->reply_type = ABH_REGISTER_INVALID_REPLY;
+	reply->request_valid = false;
+	rc = abh_parse_register_reply(&hand->rx_frame, reply);
+	if(rc == ABH_SUCCESS)
+	{
+		return true;
+	}
 	return false;
-
 }
 
 
@@ -146,7 +173,8 @@ typedef struct CommandHandlingContext
 {
 	AbilityHand * hand;
 	std::vector<std::string> * replies;
-	int response_count;	//must initialize to zero!
+	int num_expected_replies;	//must initialize!
+	int reply_count;	//must initialize to zero!
 }CommandHandlingContext;
 
 static bool _command_handling_callback(bytestream_t * stream, void * context)
@@ -155,22 +183,35 @@ static bool _command_handling_callback(bytestream_t * stream, void * context)
 	{
 		return false;	//guard. This forces read_until_valid to poll until timeout
 	}
+	const size_t header_len = 2;
+	const size_t crc_len = 2;
 
-		// responses.clear();
-		// if (rx_frame_.len < crc_len + 1)
-		// {
-		// 	return ABH_ERROR_REPLY_LEN_INVALID;
-		// }
-		// /*TODO: fix this with proper silent retry on invalid frame reception, matching other calls*/
-		// size_t rx_payload_len = rx_frame_.len - crc_len;
-		// uint16_t expected_crc = abh_crc16(rx_frame_.buf, rx_payload_len);
-		// uint16_t received_crc = (uint16_t)rx_frame_.buf[rx_payload_len] |
-		// 						((uint16_t)rx_frame_.buf[rx_payload_len + 1] << 8);
-		// if (expected_crc != received_crc)
-		// 	return ABH_ERROR_CHECKSUM_MISMATCH;
+	CommandHandlingContext * ctx = (CommandHandlingContext*)context;
+	AbilityHand * hand = ctx->hand;
+	std::vector<std::string> * replies = ctx->replies;
 
-		// responses.emplace_back(reinterpret_cast<char*>(rx_frame_.buf), rx_payload_len);
+	int rc = unstuff_stream(&hand->rx_frame, stream, hand->stuffing_mode);
 
+	if (hand->rx_frame.len < crc_len + 1)
+	{
+		return false;
+	}
+
+	/*TODO: fix this with proper silent retry on invalid frame reception, matching other calls*/
+	size_t rx_payload_len = hand->rx_frame.len - crc_len;
+	uint16_t expected_crc = abh_crc16(hand->rx_frame.buf, rx_payload_len);
+	uint16_t received_crc = (uint16_t)hand->rx_frame.buf[rx_payload_len] |
+							((uint16_t)hand->rx_frame.buf[rx_payload_len + 1] << 8);
+	if (expected_crc != received_crc)
+		return false;
+
+	replies->emplace_back(reinterpret_cast<char*>(hand->rx_frame.buf), rx_payload_len);
+	ctx->reply_count++;
+
+	if(ctx->reply_count == ctx->num_expected_replies)	//single necessary return condition
+	{
+		return true;
+	}
 	return false;
 }
 
@@ -849,9 +890,11 @@ int AbilityHand::command_handling(const std::string& payload,
 	CommandHandlingContext ctx = {
 		this,
 		&responses,
+		nresponses_expected,
 		0
 	};
 	register_callback(&_command_handling_callback, &ctx);
+	responses.clear();
 
 	int rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)

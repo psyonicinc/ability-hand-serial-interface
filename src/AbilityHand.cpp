@@ -91,16 +91,19 @@ static int unstuff_stream(abh_buffer_t * dest, bytestream_t * stream, AbilityHan
 		ppp_buffer_t ppp_stuffed = {stream->buf, stream->size, stream->len};
 		ppp_buffer_t ppp_unstuffed = {dest->buf, dest->size, dest->len};
 		size_t rc = PPP_unstuff(&ppp_unstuffed, &ppp_stuffed);
+		dest->len = ppp_unstuffed.length;
 		if(rc != 0)
 		{
 			return ABH_SUCCESS;
 		}
+		
 	}
 	else if(mode == AbilityHand::STUFFING_COBS)
 	{
 		cobs_buf_t	cobs_encoded = {stream->buf, stream->size, stream->len, COBS_ENCODED};
 		cobs_buf_t cobs_decoded = {dest->buf, dest->size, dest->len, COBS_DECODED};
 		int rc = cobs_decode_double_buffer(&cobs_encoded, &cobs_decoded);
+		dest->len = cobs_decoded.length;
 		if(rc == COBS_SUCCESS)
 		{
 			return ABH_SUCCESS;
@@ -695,7 +698,7 @@ int AbilityHand::read_and_parse_serial(int timeout_ms)
 {
 	if (stuffing_mode == STUFFING_PPP)
 	{
-		int rxlen = serial_.read_until_delimiter(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
+		int rxlen = serial_.read_until_valid(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
 		if (rxlen == -2)
 		{
 			stats_.num_timeouts++;
@@ -708,7 +711,7 @@ int AbilityHand::read_and_parse_serial(int timeout_ms)
 	}
 	else
 	{
-		int rxlen = serial_.read_until_delimiter(rx_cobs_encoded_.buf, (int)rx_cobs_encoded_.size, '\0', timeout_ms);
+		int rxlen = serial_.read_until_valid(rx_cobs_encoded_.buf, (int)rx_cobs_encoded_.size, '\0', timeout_ms);
 		if (rxlen == -2)
 		{
 			stats_.num_timeouts++;

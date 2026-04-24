@@ -160,6 +160,11 @@ static bool _abh_register_callback(bytestream_t * stream, void * context)
 	abh_register_reply_t * reply = ctx->reg_reply;
 
 	int rc = unstuff_stream(&hand->rx_frame, stream, hand->stuffing_mode);
+	if(rc != ABH_SUCCESS)	//must match expected unstuffing mode or bounce as invalid
+	{
+		return false;
+	}
+
 	reply->register_value = 0;
 	reply->reply_type = ABH_REGISTER_INVALID_REPLY;
 	reply->request_valid = false;
@@ -194,6 +199,10 @@ static bool _command_handling_callback(bytestream_t * stream, void * context)
 	std::vector<std::string> * replies = ctx->replies;
 
 	int rc = unstuff_stream(&hand->rx_frame, stream, hand->stuffing_mode);
+	if(rc != ABH_SUCCESS)	//must match expected unstuffing mode or bounce as invalid
+	{
+		return false;
+	}
 
 	if (hand->rx_frame.len < crc_len + 1)
 	{
@@ -582,6 +591,10 @@ int AbilityHand::write_register(uint32_t addr, uint32_t value, abh_register_repl
 	{
 		stats_.num_parse_errors++;
 	}
+	else
+	{
+		stats_.num_successful_reads++;
+	}
 	return rc;
 }
 
@@ -614,6 +627,10 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
 	{
 		stats_.num_parse_errors++;
 	}
+	else
+	{
+		stats_.num_successful_reads++;
+	}
 	return rc;
 }
 
@@ -639,6 +656,10 @@ int AbilityHand::exchange_motion_data(int timeout_ms)
 	{
 		stats_.num_parse_errors++;
 	}
+	else
+	{
+		stats_.num_successful_reads++;
+	}
 	return rc;
 }
 
@@ -663,6 +684,10 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
 	if (rc != ABH_SUCCESS)
 	{
 		stats_.num_parse_errors++;
+	}
+	else
+	{
+		stats_.num_successful_reads++;
 	}
 	return rc;
 }
@@ -699,7 +724,7 @@ int AbilityHand::read_and_parse_serial(int timeout_ms)
 	if (stuffing_mode == STUFFING_PPP)
 	{
 		int rxlen = serial_.read_until_valid(rx_buffer_alias_.buf, (int)rx_buffer_alias_.size, '~', timeout_ms);
-		if (rxlen == -2)
+		if (rxlen == Serial::ERROR_READ_TIMEOUT)
 		{
 			stats_.num_timeouts++;
 			return ABH_ERROR_TIMEOUT;
@@ -909,6 +934,10 @@ int AbilityHand::command_handling(const std::string& payload,
 	if (rc != ABH_SUCCESS)
 	{
 		stats_.num_parse_errors++;
+	}
+	else
+	{
+		stats_.num_successful_reads++;
 	}
 	return rc;
 }

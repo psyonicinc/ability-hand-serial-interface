@@ -69,7 +69,7 @@ int main()
 		hand.set_position_targets(positions);
 
 		// Exchange data with hand
-		int rc = hand.exchange_motion_data(5);
+		int rc = hand.exchange_motion_data();
 
 		if (rc == ABH_ERROR_TIMEOUT)
 		{

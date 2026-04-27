@@ -71,7 +71,7 @@ int main()
 			float elapsed_sec = elapsed_ms / 1000.0f;
 
 			// Exchange data with hand
-			int rc = hand.exchange_short_msg(5);
+			int rc = hand.exchange_short_msg();
 
 			if (rc == ABH_ERROR_TIMEOUT)
 			{

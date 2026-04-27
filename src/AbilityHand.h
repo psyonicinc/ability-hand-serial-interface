@@ -110,8 +110,8 @@ public:
 	int disable_upsampling(UpsamplingChannel mask = UPSAMPLING_ALL);
 
     // Core communication
-    int exchange_motion_data(int timeout_ms = 5);
-    int exchange_short_msg(int timeout_ms = 5);
+    int exchange_motion_data(int timeout_ms = 50);
+    int exchange_short_msg(int timeout_ms = 50);
     int command_handling(const std::string& payload,
                          std::vector<std::string>& responses,
                          int nresponses_expected, int timeout_ms = 50);

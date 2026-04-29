@@ -44,6 +44,17 @@ cmake --build build
 
 Builds `example_udp` (UDP control loop) and `example_serial` (serial control loop) in addition to the library.
 
+### With Python bindings
+
+Requires Python 3 and a CPython interpreter accessible to CMake.
+
+```bash
+cmake -S . -B build -DBUILD_PYTHON_BINDINGS=ON
+cmake --build build --config Release
+```
+
+Produces `abh.cpython-<ver>-<platform>.pyd` (Windows) or `abh.cpython-<ver>-<platform>.so` (Linux/macOS) under `build/python/Release/`. See [doc/python_api.md](doc/python_api.md) for usage.
+
 ---
 
 ## Using as a Dependency

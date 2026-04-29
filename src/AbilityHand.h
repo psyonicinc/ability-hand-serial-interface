@@ -92,8 +92,8 @@ public:
     ~AbilityHand();
 
     // Initialization
-    int init(unsigned long baud_rate = 921600);
-    int init(const char* port_name, unsigned long baud_rate = 921600);
+    int init(unsigned long baud_rate = 460800);
+    int init(const char* port_name, unsigned long baud_rate = 460800);
 	int init_udp(const char * ip, uint16_t port);
 	int init_udp(const UdpEndpoint& endpoint);
 	std::vector<UdpEndpoint> discover_forwarding_servers(uint32_t timeout);

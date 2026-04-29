@@ -171,10 +171,10 @@ PYBIND11_MODULE(abh, m) {
         // Initialization
         .def("init",
             py::overload_cast<unsigned long>(&AbilityHand::init),
-            py::arg("baud_rate") = 921600)
+            py::arg("baud_rate") = 460800)
         .def("init",
             py::overload_cast<const char*, unsigned long>(&AbilityHand::init),
-            py::arg("port_name"), py::arg("baud_rate") = 921600)
+            py::arg("port_name"), py::arg("baud_rate") = 460800)
         .def("init_udp",
             py::overload_cast<const char*, uint16_t>(&AbilityHand::init_udp),
             py::arg("ip"), py::arg("port"))

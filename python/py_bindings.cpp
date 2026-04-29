@@ -5,7 +5,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(ability_hand, m) {
+PYBIND11_MODULE(abh, m) {
 
     // -------------------------------------------------------------------------
     // Constants

@@ -21,7 +21,10 @@ AbilityHand::AbilityHand()
 	memset(rx_unstuff_mem_, 0, sizeof(rx_unstuff_mem_));
 	iface_ = IFACE_SERIAL;
 	stuffing_mode = STUFFING_PPP;
-	m_socket = { TCS_NULLSOCKET, "192.168.1.100", 5000, false };
+	m_socket.socket = TCS_NULLSOCKET;
+	snprintf(m_socket.ip, sizeof(m_socket.ip), "192.168.1.100");
+	m_socket.port = 5000;
+	m_socket.connected = false;
 	start_time();
 
 

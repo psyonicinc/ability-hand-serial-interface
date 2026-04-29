@@ -12,20 +12,25 @@ hand.set_motion_mode(abh.MotionMode.POSITION_MODE_TX1)
 
 start = time.time()
 
-positions = [0.0]*abh.NUM_CHANNELS
+target_positions = [0.0]*abh.NUM_CHANNELS
+q = [0.0]*abh.NUM_CHANNELS
 while True:
     elapsed = time.time() - start
     for ch in range(abh.NUM_CHANNELS):
-        positions[ch] = ((math.sin(elapsed + ch) + 1) / 2) * 50 + 10
-    positions[5] = -55.0
+        target_positions[ch] = ((math.sin(elapsed + ch) + 1) / 2) * 50 + 10
+    target_positions[5] = -55.0
 
-    hand.set_position_targets(positions)
+    hand.set_position_targets(target_positions)
     rc = hand.exchange_motion_data()
 
     if rc == abh.ABH_ERROR_TIMEOUT:
         print(f"Timeout at {elapsed:.3f}s")
     elif rc != abh.ABH_SUCCESS:
         print(f"Error: {rc}")
+
+    q = hand.get_positions()
+    i = hand.get_currents()
+    # print(q[5], i[5])
 
     if elapsed >= 5.0:
         break

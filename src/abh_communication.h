@@ -122,7 +122,6 @@ typedef struct abh_register_reply_t
  * serial communication with the Ability Hand, including command settings,
  * desired setpoints, and sensor feedback data.
  *
- * @note TODO - eventually set up as a dartt parameter list, potentially with dartt generated headers
  */
 typedef struct abh_api_t
 {
@@ -207,7 +206,6 @@ int abh_create_read_register_frame(abh_api_t  * abh, uint32_t reg_address, abh_b
  * @param frame Pointer to the buffer containing the received reply frame.
  * @param reply_word Pointer to store the extracted 32-bit register value.
  * @return ABH_SUCCESS on success, ABH_ERROR_CHECKSUM_MISMATCH if validation fails, or other error codes.
- * @note This function is currently a stub and returns 0 immediately.
  */
 int abh_parse_register_reply(abh_buffer_t * frame, abh_register_reply_t * msg);
 

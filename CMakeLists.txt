@@ -63,6 +63,6 @@ if(BUILD_EXAMPLES)
 endif()
 
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" OFF)
-if(BUILD_PYTHON_BINDINGS)
+if(BUILD_PYTHON_BINDINGS OR SKBUILD)
     add_subdirectory(python)
 endif()

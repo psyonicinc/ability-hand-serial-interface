@@ -55,6 +55,22 @@ cmake --build build --config Release
 
 Produces `abh.cpython-<ver>-<platform>.pyd` (Windows) or `abh.cpython-<ver>-<platform>.so` (Linux/macOS) under `build/python/Release/`. See [doc/python_api.md](doc/python_api.md) for usage.
 
+### Python package install (pip)
+
+To install `abh` as a package into a Python environment via pip:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/macOS
+
+pip install --upgrade pip
+pip install scikit-build-core
+pip install -e .
+```
+
+`scikit-build-core` must be installed before `pip install -e .` because pip needs it available to read the build backend declared in `pyproject.toml`. Upgrading pip first ensures PEP 517 build isolation is supported. After install, `import abh` works from anywhere in the venv without path manipulation.
+
 ---
 
 ## Using as a Dependency

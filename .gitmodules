@@ -4,3 +4,6 @@
 [submodule "external/byte-stuffing"]
 	path = external/byte-stuffing
 	url = https://github.com/Ocanath/byte-stuffing.git
+[submodule "external/pybind11"]
+	path = external/pybind11
+	url = https://github.com/pybind/pybind11

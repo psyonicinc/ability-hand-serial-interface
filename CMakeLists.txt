@@ -10,6 +10,9 @@ endif()
 if(NOT TARGET PPP)
     add_subdirectory(external/byte-stuffing)
 endif()
+if(NOT TARGET pybind11)
+    add_subdirectory(external/pybind11)
+endif()
 
 # include(FetchContent)	#uncomment to regenerate tinycsocket files
 # FetchContent_Declare(
@@ -57,4 +60,9 @@ target_link_libraries(ability_hand PUBLIC
 option(BUILD_EXAMPLES "Build example applications" OFF)
 if(BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+option(BUILD_PYTHON_BINDINGS "Build Python bindings" OFF)
+if(BUILD_PYTHON_BINDINGS)
+    add_subdirectory(python)
 endif()

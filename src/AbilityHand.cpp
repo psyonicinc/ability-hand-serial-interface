@@ -21,10 +21,10 @@ AbilityHand::AbilityHand()
 	memset(rx_unstuff_mem_, 0, sizeof(rx_unstuff_mem_));
 	iface_ = IFACE_SERIAL;
 	stuffing_mode = STUFFING_PPP;
-	m_socket.socket = TCS_NULLSOCKET;
-	snprintf(m_socket.ip, sizeof(m_socket.ip), "192.168.1.100");
-	m_socket.port = 5000;
-	m_socket.connected = false;
+	m_socket_.socket = TCS_NULLSOCKET;
+	snprintf(m_socket_.ip, sizeof(m_socket_.ip), "192.168.1.100");
+	m_socket_.port = 5000;
+	m_socket_.connected = false;
 	start_time();
 
 
@@ -77,7 +77,7 @@ AbilityHand::~AbilityHand()
 	disconnect();
 	if (iface_ == IFACE_UDP)
 	{
-		udp_disconnect(&m_socket);
+		udp_disconnect(&m_socket_);
 	}
 }
 
@@ -357,19 +357,19 @@ int AbilityHand::init_udp(const UdpEndpoint& endpoint)
 
 int AbilityHand::init_udp(const char * ip, uint16_t port)
 {
-	for(int i = 0; i < sizeof(m_socket.ip); i++)
+	for(int i = 0; i < sizeof(m_socket_.ip); i++)
 	{
-		m_socket.ip[i] = 0;
+		m_socket_.ip[i] = 0;
 	}
-	int retl = snprintf(m_socket.ip, sizeof(m_socket.ip), "%s", ip);		//consider checking returned size to avoid issues related to null termination
-	if(retl >= sizeof(m_socket.ip))
+	int retl = snprintf(m_socket_.ip, sizeof(m_socket_.ip), "%s", ip);		//consider checking returned size to avoid issues related to null termination
+	if(retl >= sizeof(m_socket_.ip))
 	{
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
 	bool is_null_terminated = false;
-	for(int i = 0; i < sizeof(m_socket.ip); i++)
+	for(int i = 0; i < sizeof(m_socket_.ip); i++)
 	{
-		if(m_socket.ip[i] == 0)
+		if(m_socket_.ip[i] == 0)
 		{
 			is_null_terminated = true;
 			break;
@@ -380,8 +380,8 @@ int AbilityHand::init_udp(const char * ip, uint16_t port)
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
 
-	m_socket.port = port;
-	bool success = udp_connect(&m_socket);
+	m_socket_.port = port;
+	bool success = udp_connect(&m_socket_);
 	if(success)
 	{
 		iface_ = IFACE_UDP;
@@ -444,7 +444,7 @@ bool AbilityHand::is_connected() const
 	}
 	else
 	{
-		return m_socket.connected;
+		return m_socket_.connected;
 	}
 }
 
@@ -755,7 +755,7 @@ int AbilityHand::read_and_parse_serial(int timeout_ms)
 
 int AbilityHand::stuff_and_write_udp()
 {
-	if (!m_socket.connected)
+	if (!m_socket_.connected)
 		return ABH_ERROR_NOT_CONNECTED;
 
 	size_t bytes_sent = 0;
@@ -770,14 +770,14 @@ int AbilityHand::stuff_and_write_udp()
 		tx_stuff_buf_.length = ppp_tx_alias.length + 1;
 
 
-		res = tcs_send(m_socket.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_NO_FLAGS, &bytes_sent);
+		res = tcs_send(m_socket_.socket, tx_stuff_buf_.buf, tx_stuff_buf_.length, TCS_NO_FLAGS, &bytes_sent);
 	}
 	else
 	{
 		abh_to_cobs(&tx_frame_, &tx_cobs_buf_);
 		if (cobs_encode_single_buffer(&tx_cobs_buf_) != COBS_SUCCESS)
 			return ABH_ERROR_WRITE_FAILED;
-		res = tcs_send(m_socket.socket, tx_cobs_buf_.buf, tx_cobs_buf_.length, TCS_NO_FLAGS, &bytes_sent);
+		res = tcs_send(m_socket_.socket, tx_cobs_buf_.buf, tx_cobs_buf_.length, TCS_NO_FLAGS, &bytes_sent);
 	}
 	if (res == TCS_SUCCESS)
 		stats_.num_writes++;
@@ -802,19 +802,19 @@ int AbilityHand::register_callback(Serial::frame_cb_t cb, void * user_context)
 
 int AbilityHand::read_and_parse_udp(int timeout_ms)
 {
-	if (!m_socket.connected)
+	if (!m_socket_.connected)
 		return ABH_ERROR_NOT_CONNECTED;
 
 	struct TcsAddress src;
 	size_t bytes_received = 0;
 	TcsReturnCode res;
-	tcs_set_receive_timeout(m_socket.socket, timeout_ms);
+	tcs_set_receive_timeout(m_socket_.socket, timeout_ms);
 
 	bytestream_t stream = {};	
 
 	if (stuffing_mode == STUFFING_PPP)
 	{
-		res = tcs_receive_from(m_socket.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_NO_FLAGS, &src, &bytes_received);
+		res = tcs_receive_from(m_socket_.socket, rx_buffer_alias_.buf, rx_buffer_alias_.size, TCS_NO_FLAGS, &src, &bytes_received);
 		if (res != TCS_SUCCESS || bytes_received == 0)
 			return ABH_ERROR_TIMEOUT;
 		rx_buffer_alias_.length = bytes_received;
@@ -825,7 +825,7 @@ int AbilityHand::read_and_parse_udp(int timeout_ms)
 	}
 	else
 	{
-		res = tcs_receive_from(m_socket.socket, rx_cobs_encoded_.buf, rx_cobs_encoded_.size, TCS_NO_FLAGS, &src, &bytes_received);
+		res = tcs_receive_from(m_socket_.socket, rx_cobs_encoded_.buf, rx_cobs_encoded_.size, TCS_NO_FLAGS, &src, &bytes_received);
 		if (res != TCS_SUCCESS || bytes_received == 0)
 			return ABH_ERROR_TIMEOUT;
 		rx_cobs_encoded_.length = bytes_received;
@@ -1084,4 +1084,14 @@ void AbilityHand::reset_statistics()
 abh_api_t& AbilityHand::get_hand_state()
 {
 	return hand_state;
+}
+
+Serial& AbilityHand::get_serial()
+{
+	return serial_;
+}
+
+UdpState& AbilityHand::get_socket()
+{
+	return m_socket_;
 }

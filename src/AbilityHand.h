@@ -134,17 +134,19 @@ public:
 
     // Direct access to hand state (for advanced users)
     abh_api_t& get_hand_state();
+    Serial& get_serial();
+    UdpState& get_socket();
 
     // Hand state
     abh_api_t hand_state;
 	StuffingMode stuffing_mode;
 	abh_buffer_t rx_frame;
 
-	UdpState m_socket;
 
 private:
     // Serial communication
     Serial serial_;
+	UdpState m_socket_;
 	
 	//second copy of the callback and context used by serial_ - we re-use the parser in other comm modes like udp. 
 	//could also make these public and part of serial, but pointers are very cheap, so not a big deal. Use register callback 

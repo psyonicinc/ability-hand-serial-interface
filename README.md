@@ -53,7 +53,7 @@ cmake -S . -B build -DBUILD_PYTHON_BINDINGS=ON
 cmake --build build --config Release
 ```
 
-Produces `abh.cpython-<ver>-<platform>.pyd` (Windows) or `abh.cpython-<ver>-<platform>.so` (Linux/macOS) under `build/python/Release/`. See [doc/python_api.md](doc/python_api.md) for usage.
+Produces `abh.cpython-<ver>-<platform>.pyd` (Windows) or `abh.cpython-<ver>-<platform>.so` (Linux/macOS) under `build/python/Release/`. See [docs/python_api.md](docs/python_api.md) for usage.
 
 ### Python package install (pip)
 

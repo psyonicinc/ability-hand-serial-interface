@@ -646,7 +646,7 @@ int AbilityHand::exchange_motion_data(int timeout_ms)
 	if (rc != ABH_SUCCESS)
 		return rc;
 
-	register_callback(_motion_data_callback, this);
+	register_callback(&_motion_data_callback, this);
 
 	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)
@@ -675,7 +675,7 @@ int AbilityHand::exchange_short_msg(int timeout_ms)
 	if (rc != ABH_SUCCESS)
 		return rc;
 
-	register_callback(_motion_data_callback, this);
+	register_callback(&_motion_data_callback, this);
 
 	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)

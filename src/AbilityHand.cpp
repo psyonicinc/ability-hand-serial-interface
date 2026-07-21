@@ -707,6 +707,11 @@ int AbilityHand::stuff_and_write_serial()
 		PPP_stuff(&tx_unstuff_alias_, &ppp_tx_alias);
 		tx_stuff_buf_.length = ppp_tx_alias.length + 1;
 
+		for(int i = 0; i < 10; i++)
+		{
+			tx_stuff_buf_.buf[tx_stuff_buf_.length++] = 0;
+		}
+
 		bytes_written = serial_.write(tx_stuff_buf_.buf, (int)tx_stuff_buf_.length);
 	}
 	else

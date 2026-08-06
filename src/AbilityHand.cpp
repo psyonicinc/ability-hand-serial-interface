@@ -637,6 +637,42 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
 	return rc;
 }
 
+int AbilityHand::cmd_grip(GripCommand grip, uint8_t speed, int timeout_ms)
+{
+	if(!is_connected())
+		return ABH_ERROR_NOT_CONNECTED;
+	
+	const size_t frame_len = 5; // addr, 0x1D, grip, speed, chksum
+	if (frame_len > tx_frame_.size)
+		return ABH_ERROR_BUFFER_OVERRUN;
+
+	tx_frame_.buf[0] = hand_state.address;
+	tx_frame_.buf[1] = 0x1D; 
+	tx_frame_.buf[2] = (uint8_t)grip;
+	tx_frame_.buf[3] = speed;
+	tx_frame_.buf[4] = abh_get_checksum(tx_frame_.buf, (frame_len - 1));
+	tx_frame_.len = frame_len;
+
+	register_callback(&_motion_data_callback, this);
+
+	int rc = stuff_and_write();
+	if (rc != ABH_SUCCESS)
+	{
+		return rc;
+	}
+
+	rc = read_and_parse(timeout_ms);
+	if (rc != ABH_SUCCESS)
+	{
+		stats_.num_parse_errors++;
+	}
+	else
+	{
+		stats_.num_successful_reads++;
+	}
+	return rc;
+}
+
 int AbilityHand::exchange_motion_data(int timeout_ms)
 {
 	if (!is_connected())

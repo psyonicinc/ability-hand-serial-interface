@@ -49,6 +49,43 @@ public:
         DUMMY_READ_TX3
     };
 
+    // Grip command modes
+    enum GripCommand : uint8_t {
+        GRIP_OPEN                  = 0x00,
+        GRIP_POWER                 = 0x01,
+        GRIP_KEY                   = 0x02,
+        GRIP_PINCH                 = 0x03,
+        GRIP_TRIPOD_OPENED         = 0x04,
+        GRIP_SIGN_OF_THE_HORNS     = 0x05,
+        GRIP_CYLINDER              = 0x06,
+        GRIP_MOUSE                 = 0x07,
+        GRIP_POWER_KEY_SWITCH      = 0x08,
+        GRIP_POINT                 = 0x09,
+        GRIP_RUDE_POINT            = 0x0A,
+        GRIP_HOOK                  = 0x0B,
+        GRIP_RELAX                 = 0x0C,
+        GRIP_SLEEVE                = 0x0D,
+        GRIP_PEACE                 = 0x0E,
+        GRIP_TRIPOD_CLOSED         = 0x0F,
+        GRIP_HANGLOOSE             = 0x10,
+        GRIP_HANDSHAKE             = 0x11,
+        GRIP_FIXED_PINCH           = 0x12,
+        GRIP_USER_7                = 0x13,
+        GRIP_USER_8                = 0x14,
+        GRIP_USER_9                = 0x15,
+        GRIP_USER_10               = 0x16,
+        GRIP_USER_11               = 0x17,
+        GRIP_TRIGGER               = 0x18,
+        GRIP_USER_12               = 0x19,
+        GRIP_USER_13               = 0x1A,
+        GRIP_USER_14               = 0x1B,
+        GRIP_USER_15               = 0x1C,
+        GRIP_USER_16               = 0x1D,
+        GRIP_USER_17               = 0x1E,
+        GRIP_USER_18               = 0x1F,
+        GRIP_FINGER_WAVE           = 0x20,
+    };
+
 	enum CommType {
 		IFACE_SERIAL,
 		IFACE_UDP

@@ -15,3 +15,6 @@ target_link_libraries(example_readonly_udp_discovery PRIVATE ability_hand)
 
 add_executable(example_commandhandling example_commandhandling.cpp)
 target_link_libraries(example_commandhandling PRIVATE ability_hand)
+
+add_executable(example_grip example_grip.cpp)
+target_link_libraries(example_grip PRIVATE ability_hand)

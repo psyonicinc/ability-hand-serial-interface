@@ -147,7 +147,7 @@ public:
 	int disable_upsampling(UpsamplingChannel mask = UPSAMPLING_ALL);
 
     // Grip command
-    int cmd_grip(GripCommand grip, uint8_t speed = 0xFF, abh_grip_t& reply, int timeout_ms = 50);
+    int cmd_grip(GripCommand grip, uint8_t speed, abh_grip_t& reply, int timeout_ms = 50);
 
     // Core communication
     int exchange_motion_data(int timeout_ms = 50);

@@ -26,7 +26,8 @@ int main()
 
     for (auto& step: sequence)
     {
-        int rc = hand.cmd_grip(step.grip, 0xFF, 100);
+        abh_grip_t reply;
+        int rc = hand.cmd_grip(step.grip, 0xFF, reply, 100);
         std::cout << step.name << " -> rc=" << rc;
 
         if (rc == ABH_SUCCESS)

@@ -450,6 +450,44 @@ int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 }
 
 /*
+Blocking function to parse grip reply
+*/
+int abh_parse_grip_reply(abh_buffer_t * frame, abh_grip_t * abh_grip)
+{
+	int chkrc = abh_check_msg(frame);
+	if (chkrc != ABH_SUCCESS) 
+	{
+		return chkrc;
+	}
+	if (abh_grip == NULL) 
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+
+	size_t grip_reply_len = 10;
+	if (frame->len != grip_reply_len)
+	{
+		return ABH_ERROR_REPLY_LEN_INVALID;
+	}
+
+	if(!abh_verify_checksum(frame))
+	{
+		return ABH_ERROR_CHECKSUM_MISMATCH;
+	}
+
+	abh_grip->vibration_motor_intensity = (uint16_t)frame->buf[0] | ((uint16_t)frame->buf[1] << 8);
+	abh_grip->handshake_valid = (frame->buf[2] == 0xEF && frame->buf[3] == 0xBE);
+	abh_grip->grip_color[0] = frame->buf[4];
+	abh_grip->grip_color[1] = frame->buf[5];
+	abh_grip->grip_color[2] = frame->buf[6];
+	abh_grip->grip_status = frame->buf[7];
+	abh_grip->idle = (frame->buf[8] & 0x80) != 0;
+	abh_grip->grip_percent = frame->buf[8] & 0x7F;
+
+	return ABH_SUCCESS;
+}
+
+/*
 	Helper for checking abh buffers
 */
 int abh_check_msg(abh_buffer_t* msg)

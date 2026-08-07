@@ -137,6 +137,28 @@ static bool _motion_data_callback(bytestream_t * stream, void * context)
 	return false;
 }
 
+static bool _grip_data_callback(bytestream_t * stream, void * context)
+{
+	if(context == NULL)
+	{
+		return false;	//guard. This forces read_until_valid to poll until timeout
+	}
+	AbilityHand * hand = (AbilityHand*)context;
+
+	int rc = unstuff_stream(&hand->rx_frame, stream, hand->stuffing_mode);
+	if(rc != ABH_SUCCESS)	//must match expected unstuffing mode or bounce as invalid
+	{
+		return false;
+	}
+	rc = abh_parse_movement_reply(&hand->rx_frame, &hand->hand_state);
+	if(rc == ABH_SUCCESS)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 /*Should consist of ONLY pointers*/
 typedef struct RegisterContext
 {

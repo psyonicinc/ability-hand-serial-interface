@@ -464,7 +464,7 @@ int abh_parse_grip_reply(abh_buffer_t * frame, abh_grip_t * abh_grip)
 		return ABH_ERROR_INVALID_ARGUMENT;
 	}
 
-	size_t grip_reply_len = 10;
+	size_t grip_reply_len = 10 + 1; // a stale demo byte is added in firmware, so length is 10 + 1
 	if (frame->len != grip_reply_len)
 	{
 		return ABH_ERROR_REPLY_LEN_INVALID;
@@ -476,7 +476,7 @@ int abh_parse_grip_reply(abh_buffer_t * frame, abh_grip_t * abh_grip)
 	}
 
 	abh_grip->vibration_motor_intensity = (uint16_t)frame->buf[0] | ((uint16_t)frame->buf[1] << 8);
-	abh_grip->handshake_valid = (frame->buf[2] == 0xEF && frame->buf[3] == 0xBE);
+	abh_grip->handshake_valid = (frame->buf[2] == 0xBE && frame->buf[3] == 0xEF);
 	abh_grip->grip_color[0] = frame->buf[4];
 	abh_grip->grip_color[1] = frame->buf[5];
 	abh_grip->grip_color[2] = frame->buf[6];

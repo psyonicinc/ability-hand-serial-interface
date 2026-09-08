@@ -59,7 +59,8 @@ enum
 	ENABLE_BLUETOOTH_RADIO = 0x07,       /**< Enable the Bluetooth radio */
 	DISABLE_BLUETOOTH_RADIO = 0x08,      /**< Disable the Bluetooth radio */
 	RESTART_HAND = 0x09,                 /**< Restart the hand controller */
-	API_EXIT_CMD = 0x7C                  /**< Exit API mode */
+	API_EXIT_CMD = 0x7C,                 /**< Exit API mode */
+	GRIP_CONTROL = 0x1D                  /**< Command grip mode, reply with grip status */
 };
 
 /**

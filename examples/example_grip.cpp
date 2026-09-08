@@ -89,7 +89,7 @@ int main()
         const GripEntry& entry = kGrips[grip_dist(rng)];
 
         abh_grip_t reply = {};
-        int rc = hand.cmd_grip(entry.grip, 0xFF, reply, 100);
+        int rc = hand.exchange_grip_data(entry.grip, 0xFF, reply, 100);
 
         std::cout << "[" << (i + 1) << "/" << kNumGripsToCycle << "] " << entry.name << " -> rc=" << rc;
         if (rc == ABH_SUCCESS)

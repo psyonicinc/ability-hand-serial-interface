@@ -666,17 +666,17 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
 	return rc;
 }
 
-int AbilityHand::cmd_grip(GripCommand grip, uint8_t speed, abh_grip_t& reply, int timeout_ms)
+int AbilityHand::exchange_grip_data(GripCommand grip, uint8_t speed, abh_grip_t& reply, int timeout_ms)
 {
 	if(!is_connected())
 		return ABH_ERROR_NOT_CONNECTED;
-	
-	const size_t frame_len = 5; // addr, 0x1D, grip, speed, chksum
+
+	const size_t frame_len = 5; // addr, GRIP_CONTROL, grip, speed, chksum
 	if (frame_len > tx_frame_.size)
 		return ABH_ERROR_BUFFER_OVERRUN;
 
 	tx_frame_.buf[0] = hand_state.address;
-	tx_frame_.buf[1] = 0x1D; 
+	tx_frame_.buf[1] = GRIP_CONTROL;
 	tx_frame_.buf[2] = (uint8_t)grip;
 	tx_frame_.buf[3] = speed;
 	tx_frame_.buf[4] = abh_get_checksum(tx_frame_.buf, (frame_len - 1));

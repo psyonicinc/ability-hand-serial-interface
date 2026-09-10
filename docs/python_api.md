@@ -90,6 +90,35 @@ Bitmask flags for selecting upsampled channels.
 | `UPSAMPLING_THUMB_ROTATOR` |
 | `UPSAMPLING_ALL` |
 
+### `GripCommand`
+Selects a preset grip pattern for `exchange_grip_data`.
+
+| Value |
+|---|
+| `GRIP_OPEN` |
+| `GRIP_POWER` |
+| `GRIP_KEY` |
+| `GRIP_PINCH` |
+| `GRIP_TRIPOD_OPENED` |
+| `GRIP_SIGN_OF_THE_HORNS` |
+| `GRIP_CYLINDER` |
+| `GRIP_MOUSE` |
+| `GRIP_POWER_KEY_SWITCH` |
+| `GRIP_POINT` |
+| `GRIP_RUDE_POINT` |
+| `GRIP_HOOK` |
+| `GRIP_RELAX` |
+| `GRIP_SLEEVE` |
+| `GRIP_PEACE` |
+| `GRIP_TRIPOD_CLOSED` |
+| `GRIP_HANGLOOSE` |
+| `GRIP_HANDSHAKE` |
+| `GRIP_FIXED_PINCH` |
+| `GRIP_USER_7` / `8` / `9` / `10` / `11` |
+| `GRIP_TRIGGER` |
+| `GRIP_USER_12` / `13` / `14` / `15` / `16` / `17` / `18` |
+| `GRIP_FINGER_WAVE` |
+
 ---
 
 ## Classes
@@ -162,6 +191,13 @@ Both return `(return_code, reply)` — the out-parameter is folded into the tupl
 | `enable_upsampling(mask=UPSAMPLING_ALL)` | `int` |
 | `disable_upsampling(mask=UPSAMPLING_ALL)` | `int` |
 
+#### Grip Command
+Returns `(return_code, reply)` — the out-parameter is folded into the tuple. 
+
+| Method | Returns |
+|---|---|
+| `exchange_grip_data(grip, speed, timeout_ms=50)` | `tuple[int, GripReply]` |
+
 #### Discovery (UDP)
 
 | Method | Returns |
@@ -224,6 +260,20 @@ Feedback data populated after each `exchange_motion_data` call. Array fields ret
 | `request_valid` | `bool` | True if the reply is valid |
 | `reply_type` | `int` | `ABH_REGISTER_INVALID_REPLY`, `WRITE_REPLY`, or `READ_REPLY` |
 | `register_value` | `int` | Register value (read replies only) |
+
+---
+
+### `GripReply`
+
+| Field | Type | Description |
+|---|---|---|
+| `address` | `int` | Device address |
+| `vibration_motor_intensity` | `int` | Touch sensor value mapping |
+| `handshake_valid` | `bool` | True if the reply's 0xBEEF handshake matched |
+| `grip_color` | `list[int]`, length 3 | R, G, B grip color |
+| `grip_status` | `int` | Status indicator for motion completion |
+| `grip_percent` | `int` | Grip completion percentage |
+| `idle` | `bool` | Motor driver idle status |
 
 ---
 

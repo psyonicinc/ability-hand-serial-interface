@@ -48,6 +48,21 @@ PYBIND11_MODULE(abh, m) {
         .def_readwrite("register_value",  &abh_register_reply_t::register_value);
 
     // -------------------------------------------------------------------------
+    // abh_grip_t
+    // -------------------------------------------------------------------------
+    py::class_<abh_grip_t>(m, "GripReply")
+        .def(py::init<>())
+        .def_readwrite("address",                  &abh_grip_t::address)
+        .def_readwrite("vibration_motor_intensity", &abh_grip_t::vibration_motor_intensity)
+        .def_readwrite("handshake_valid",           &abh_grip_t::handshake_valid)
+        .def_readwrite("grip_status",               &abh_grip_t::grip_status)
+        .def_readwrite("grip_percent",              &abh_grip_t::grip_percent)
+        .def_readwrite("idle",                      &abh_grip_t::idle)
+        .def_property_readonly("grip_color", [](const abh_grip_t& g) {
+            return std::vector<uint8_t>(g.grip_color, g.grip_color + 3);
+        });
+
+    // -------------------------------------------------------------------------
     // UdpEndpoint
     // -------------------------------------------------------------------------
     py::class_<UdpEndpoint>(m, "UdpEndpoint")
@@ -158,6 +173,42 @@ PYBIND11_MODULE(abh, m) {
         .value("UPSAMPLING_ALL",           AbilityHand::UPSAMPLING_ALL)
         .export_values();
 
+    py::enum_<AbilityHand::GripCommand>(m, "GripCommand")
+        .value("GRIP_OPEN",              AbilityHand::GRIP_OPEN)
+        .value("GRIP_POWER",             AbilityHand::GRIP_POWER)
+        .value("GRIP_KEY",               AbilityHand::GRIP_KEY)
+        .value("GRIP_PINCH",             AbilityHand::GRIP_PINCH)
+        .value("GRIP_TRIPOD_OPENED",     AbilityHand::GRIP_TRIPOD_OPENED)
+        .value("GRIP_SIGN_OF_THE_HORNS", AbilityHand::GRIP_SIGN_OF_THE_HORNS)
+        .value("GRIP_CYLINDER",          AbilityHand::GRIP_CYLINDER)
+        .value("GRIP_MOUSE",             AbilityHand::GRIP_MOUSE)
+        .value("GRIP_POWER_KEY_SWITCH",  AbilityHand::GRIP_POWER_KEY_SWITCH)
+        .value("GRIP_POINT",             AbilityHand::GRIP_POINT)
+        .value("GRIP_RUDE_POINT",        AbilityHand::GRIP_RUDE_POINT)
+        .value("GRIP_HOOK",              AbilityHand::GRIP_HOOK)
+        .value("GRIP_RELAX",             AbilityHand::GRIP_RELAX)
+        .value("GRIP_SLEEVE",            AbilityHand::GRIP_SLEEVE)
+        .value("GRIP_PEACE",             AbilityHand::GRIP_PEACE)
+        .value("GRIP_TRIPOD_CLOSED",     AbilityHand::GRIP_TRIPOD_CLOSED)
+        .value("GRIP_HANGLOOSE",         AbilityHand::GRIP_HANGLOOSE)
+        .value("GRIP_HANDSHAKE",         AbilityHand::GRIP_HANDSHAKE)
+        .value("GRIP_FIXED_PINCH",       AbilityHand::GRIP_FIXED_PINCH)
+        .value("GRIP_USER_7",            AbilityHand::GRIP_USER_7)
+        .value("GRIP_USER_8",            AbilityHand::GRIP_USER_8)
+        .value("GRIP_USER_9",            AbilityHand::GRIP_USER_9)
+        .value("GRIP_USER_10",           AbilityHand::GRIP_USER_10)
+        .value("GRIP_USER_11",           AbilityHand::GRIP_USER_11)
+        .value("GRIP_TRIGGER",           AbilityHand::GRIP_TRIGGER)
+        .value("GRIP_USER_12",           AbilityHand::GRIP_USER_12)
+        .value("GRIP_USER_13",           AbilityHand::GRIP_USER_13)
+        .value("GRIP_USER_14",           AbilityHand::GRIP_USER_14)
+        .value("GRIP_USER_15",           AbilityHand::GRIP_USER_15)
+        .value("GRIP_USER_16",           AbilityHand::GRIP_USER_16)
+        .value("GRIP_USER_17",           AbilityHand::GRIP_USER_17)
+        .value("GRIP_USER_18",           AbilityHand::GRIP_USER_18)
+        .value("GRIP_FINGER_WAVE",       AbilityHand::GRIP_FINGER_WAVE)
+        .export_values();
+
     // -------------------------------------------------------------------------
     // AbilityHand class
     // -------------------------------------------------------------------------
@@ -213,6 +264,15 @@ PYBIND11_MODULE(abh, m) {
         .def("disable_upsampling",
             &AbilityHand::disable_upsampling,
             py::arg("mask") = AbilityHand::UPSAMPLING_ALL)
+
+        // Grip command — out-param reply wrapped into return tuple (int, GripReply)
+        .def("exchange_grip_data",
+            [](AbilityHand& h, AbilityHand::GripCommand grip, uint8_t speed, int timeout_ms) {
+                abh_grip_t reply{};
+                int ret = h.exchange_grip_data(grip, speed, reply, timeout_ms);
+                return py::make_tuple(ret, reply);
+            },
+            py::arg("grip"), py::arg("speed"), py::arg("timeout_ms") = 50)
 
         // Core communication
         .def("exchange_motion_data", &AbilityHand::exchange_motion_data,

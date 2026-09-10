@@ -59,7 +59,8 @@ enum
 	ENABLE_BLUETOOTH_RADIO = 0x07,       /**< Enable the Bluetooth radio */
 	DISABLE_BLUETOOTH_RADIO = 0x08,      /**< Disable the Bluetooth radio */
 	RESTART_HAND = 0x09,                 /**< Restart the hand controller */
-	API_EXIT_CMD = 0x7C                  /**< Exit API mode */
+	API_EXIT_CMD = 0x7C,                 /**< Exit API mode */
+	GRIP_CONTROL = 0x1D                  /**< Command grip mode, reply with grip status */
 };
 
 /**
@@ -139,6 +140,25 @@ typedef struct abh_api_t
 	uint8_t hot_cold_bitmask;                         /**< Status bitmask for motor temperature warnings */
 
 }abh_api_t;
+
+/**
+ * @brief API data structure for grip commands.
+ *
+ * This structure contains the command and feedback data for grip control,
+ * including the grip color, percent, and status information. 
+ * 
+ */
+typedef struct abh_grip_t
+{
+	uint8_t address;								  /**< Device address for communication */
+	uint16_t vibration_motor_intensity;               /**< Touch sensor value mapping */
+	bool handshake_valid;							  /**< Validates handshake using 0xBEEF */
+	uint8_t grip_color[3];                            /**< R,G,B grip color */
+	uint8_t grip_status;                              /**< Status indicator for motion completion */
+	uint8_t grip_percent;                             /**< Grip completion percentage */
+	bool idle;                                        /**< Motor driver idle status */
+
+} abh_grip_t;
 
 typedef struct abh_buffer_t
 {
@@ -247,6 +267,35 @@ int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame);
  *         ABH_ERROR_INVALID_REPLY_MODE, ABH_ERROR_BUFFER_OVERRUN) on failure.
  */
 int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh);
+
+/**
+ * @brief Creates a grip control command frame
+ * 
+ * Constructs a serial frame to command a grip mode and speed on
+ * the Ability Hand. The frame includes address, command header, grip
+ * selector, speed, and checksum.
+ * 
+ * @param abh_grip Pointer to the grip state structure (used for address)
+ * @param grip Grip command selector 
+ * @param speed Grip speed setting
+ * @param frame Pointer to the buffer where the frame will be stored
+ * @return ABH_SUCCESS on success, or an error code on failure
+ */
+int abh_create_grip_frame(abh_grip_t * abh_grip, uint8_t grip, uint8_t speed, abh_buffer_t * frame);
+
+/**
+ * @brief Parses a grip control reply frame.
+ * 
+ * Extracts grip feedback data (color, status, percent, etc.)
+ * from a reply frame received after a grip command. Validates checksum
+ * and reply format, then unpacks data into the API state structure.
+ * 
+ * @param frame Pointer to the buffer containing the received reply frame.
+ * @param abh Pointer to the API state structure where parsed data will be stored.
+ * @return ABH_SUCCESS on success, or an error code (ABH_ERROR_CHECKSUM_MISMATCH,
+ *         ABH_ERROR_INVALID_REPLY_MODE, ABH_ERROR_BUFFER_OVERRUN) on failure.
+ */
+int abh_parse_grip_reply(abh_buffer_t * frame, abh_grip_t * abh_grip);
 
 /**
  * @brief Helper function to check an abh_buffer_t

@@ -137,6 +137,8 @@ static bool _motion_data_callback(bytestream_t * stream, void * context)
 	return false;
 }
 
+
+
 /*Should consist of ONLY pointers*/
 typedef struct RegisterContext
 {
@@ -179,6 +181,33 @@ static bool _abh_register_callback(bytestream_t * stream, void * context)
 	return false;
 }
 
+typedef struct GripReplyContext
+{
+	AbilityHand * hand;
+	abh_grip_t * reply;
+} GripReplyContext;
+
+static bool _grip_data_callback(bytestream_t * stream, void * context)
+{
+	if(context == NULL)
+	{
+		return false;	//guard. This forces read_until_valid to poll until timeout
+	}
+	GripReplyContext * ctx = (GripReplyContext*)context;
+	AbilityHand * hand = ctx->hand;
+
+	int rc = unstuff_stream(&hand->rx_frame, stream, hand->stuffing_mode);
+	if(rc != ABH_SUCCESS)	//must match expected unstuffing mode or bounce as invalid
+	{
+		return false;
+	}
+	rc = abh_parse_grip_reply(&hand->rx_frame, ctx->reply);
+	if(rc == ABH_SUCCESS)
+	{
+		return true;
+	} 
+	return false;
+}
 
 typedef struct CommandHandlingContext
 {
@@ -621,6 +650,39 @@ int AbilityHand::read_register(uint32_t addr, abh_register_reply_t& reply, int t
 
 	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS) 
+	{
+		return rc;
+	}
+
+	rc = read_and_parse(timeout_ms);
+	if (rc != ABH_SUCCESS)
+	{
+		stats_.num_parse_errors++;
+	}
+	else
+	{
+		stats_.num_successful_reads++;
+	}
+	return rc;
+}
+
+int AbilityHand::exchange_grip_data(GripCommand grip, uint8_t speed, abh_grip_t& reply, int timeout_ms)
+{
+	if(!is_connected())
+		return ABH_ERROR_NOT_CONNECTED;
+
+	reply.address = hand_state.address;
+	int rc = abh_create_grip_frame(&reply, (uint8_t)grip, speed, &tx_frame_);
+	if(rc != ABH_SUCCESS)
+	{
+		return rc;
+	}
+
+	GripReplyContext ctx = {this, &reply};
+	register_callback(&_grip_data_callback, &ctx);
+
+	rc = stuff_and_write();
+	if (rc != ABH_SUCCESS)
 	{
 		return rc;
 	}

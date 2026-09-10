@@ -142,4 +142,50 @@ void test_abh_parse_grip_reply_idle_percent_bit_split(void)
     TEST_ASSERT_EQUAL(0x7F, grip.grip_percent);
 }
 
+void test_abh_create_grip_frame(void)
+{
+    abh_grip_t grip = {};
+    grip.address = 0x50;
+    unsigned char txmem[128] = {};
+    abh_buffer_t tx = {.buf = txmem, .size = sizeof(txmem), .len = 0};
 
+    int rc = abh_create_grip_frame(&grip, 0x06, 0xFF, &tx);
+    TEST_ASSERT_EQUAL(ABH_SUCCESS, rc);
+    TEST_ASSERT_EQUAL(5, tx.len);
+
+    TEST_ASSERT_EQUAL(0x50, tx.buf[0]);
+    TEST_ASSERT_EQUAL(GRIP_CONTROL, tx.buf[1]);
+    TEST_ASSERT_EQUAL(0x06, tx.buf[2]);
+    TEST_ASSERT_EQUAL(0xFF, tx.buf[3]);
+
+    uint8_t chk = abh_get_checksum(tx.buf, tx.len);
+    TEST_ASSERT_EQUAL(0, chk);
+}
+
+void test_abh_create_grip_frame_null_checks(void)
+  {
+      abh_grip_t grip = {};
+      unsigned char txmem[128] = {};
+      abh_buffer_t tx = {.buf = txmem, .size = sizeof(txmem), .len = 0};
+
+      int rc = abh_create_grip_frame(NULL, 0x00, 0x00, &tx);
+      TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
+
+      rc = abh_create_grip_frame(&grip, 0x00, 0x00, NULL);
+      TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
+
+      tx.size = 0;
+      rc = abh_create_grip_frame(&grip, 0x00, 0x00, &tx);
+      TEST_ASSERT_EQUAL(ABH_ERROR_INVALID_ARGUMENT, rc);
+  }
+
+  void test_abh_create_grip_frame_buffer_overrun(void)
+  {
+      abh_grip_t grip = {};
+      grip.address = 0x50;
+      unsigned char txmem[4] = {};  // Too small (frame needs 5 bytes)
+      abh_buffer_t tx = {.buf = txmem, .size = sizeof(txmem), .len = 0};
+
+      int rc = abh_create_grip_frame(&grip, 0x01, 0x80, &tx);
+      TEST_ASSERT_EQUAL(ABH_ERROR_BUFFER_OVERRUN, rc);
+  }

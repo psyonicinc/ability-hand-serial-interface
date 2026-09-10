@@ -268,6 +268,20 @@ int abh_create_movement_frame(abh_api_t * abh, abh_buffer_t * frame);
  */
 int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh);
 
+/**
+ * @brief Creates a grip control command frame
+ * 
+ * Constructs a serial frame to command a grip mode and speed on
+ * the Ability Hand. The frame includes address, command header, grip
+ * selector, speed, and checksum.
+ * 
+ * @param abh_grip Pointer to the grip state structure (used for address)
+ * @param grip Grip command selector 
+ * @param speed Grip speed setting
+ * @param frame Pointer to the buffer where the frame will be stored
+ * @return ABH_SUCCESS on success, or an error code on failure
+ */
+int abh_create_grip_frame(abh_grip_t * abh_grip, uint8_t grip, uint8_t speed, abh_buffer_t * frame);
 
 /**
  * @brief Parses a grip control reply frame.

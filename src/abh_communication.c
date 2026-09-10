@@ -450,6 +450,36 @@ int abh_parse_movement_reply(abh_buffer_t * frame, abh_api_t * abh)
 }
 
 /*
+Builds a grip control command frame
+*/
+int abh_create_grip_frame(abh_grip_t * abh_grip, uint8_t grip, uint8_t speed, abh_buffer_t * frame)
+{
+	int chkrc = abh_check_msg(frame);
+	if(chkrc != ABH_SUCCESS)
+	{
+		return chkrc;
+	} 
+	if(abh_grip == NULL)
+	{
+		return ABH_ERROR_INVALID_ARGUMENT;
+	}
+	if(frame->size < 5)
+	{
+		return ABH_ERROR_BUFFER_OVERRUN;
+	}
+
+	frame->len = 0;
+	frame->buf[frame->len++] = abh_grip->address;
+	frame->buf[frame->len++] = GRIP_CONTROL;
+	frame->buf[frame->len++] = grip;
+	frame->buf[frame->len++] = speed;
+	frame->buf[frame->len] = abh_get_checksum((uint8_t*)frame->buf, (int)frame->len);
+	frame->len++;
+	return ABH_SUCCESS;
+}
+
+
+/*
 Blocking function to parse grip reply
 */
 int abh_parse_grip_reply(abh_buffer_t * frame, abh_grip_t * abh_grip)

@@ -671,21 +671,17 @@ int AbilityHand::exchange_grip_data(GripCommand grip, uint8_t speed, abh_grip_t&
 	if(!is_connected())
 		return ABH_ERROR_NOT_CONNECTED;
 
-	const size_t frame_len = 5; // addr, GRIP_CONTROL, grip, speed, chksum
-	if (frame_len > tx_frame_.size)
-		return ABH_ERROR_BUFFER_OVERRUN;
-
-	tx_frame_.buf[0] = hand_state.address;
-	tx_frame_.buf[1] = GRIP_CONTROL;
-	tx_frame_.buf[2] = (uint8_t)grip;
-	tx_frame_.buf[3] = speed;
-	tx_frame_.buf[4] = abh_get_checksum(tx_frame_.buf, (frame_len - 1));
-	tx_frame_.len = frame_len;
+	reply.address = hand_state.address;
+	int rc = abh_create_grip_frame(&reply, (uint8_t)grip, speed, &tx_frame_);
+	if(rc != ABH_SUCCESS)
+	{
+		return rc;
+	}
 
 	GripReplyContext ctx = {this, &reply};
 	register_callback(&_grip_data_callback, &ctx);
 
-	int rc = stuff_and_write();
+	rc = stuff_and_write();
 	if (rc != ABH_SUCCESS)
 	{
 		return rc;
